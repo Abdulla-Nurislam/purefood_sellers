@@ -97,36 +97,38 @@ export function Auth() {
         // Registration flow — show profile form
         setStep("profile");
       } else {
-        // Login flow — find existing account and log in
-        // NEVER redirect to registration screen
+        // Login flow — try to find existing account, but always let user in
         try {
           const { getSellerByPhone } = await import('../../lib/api');
           const seller = await getSellerByPhone(phone);
           if (seller && seller.id) {
-            // Account found — log in with whatever data is available
+            // Account found in DB — log in with full data
             setUser({
               id: seller.id,
               authMethod: "phone",
               phone: seller.phone || phone,
-              companyName: seller.company_name || "",
+              companyName: seller.company_name || "Мой магазин",
               contactName: seller.contact_name || "",
               categories: seller.categories || [],
             });
             navigate("/");
-          } else {
-            // No account found — show error, suggest registration
-            setSmsError(true);
-            setSmsCode(["", "", "", ""]);
-            smsRefs[0].current?.focus();
-            setLoginError("Аккаунт с этим номером не найден. Зарегистрируйтесь.");
+            return;
           }
         } catch (err) {
-          console.error('Login error:', err);
-          setSmsError(true);
-          setSmsCode(["", "", "", ""]);
-          smsRefs[0].current?.focus();
-          setLoginError("Ошибка при входе. Попробуйте снова.");
+          console.error('Supabase lookup failed, using local login:', err);
         }
+        
+        // Fallback: account not found in DB or Supabase unavailable
+        // Still log user in with phone-based local profile
+        setUser({
+          id: `seller-${Date.now()}`,
+          authMethod: "phone",
+          phone,
+          companyName: "Мой магазин",
+          contactName: "",
+          categories: [],
+        });
+        navigate("/");
       }
     } else {
       setSmsError(true);
