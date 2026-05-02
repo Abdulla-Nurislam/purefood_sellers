@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Plus, Search, Filter, MoreVertical, PackageOpen, Edit, Trash2, Eye,
@@ -56,12 +56,23 @@ const CATEGORIES = ["Все", "Злаки", "Сладости", "Крупы", "�
 export function Products() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Все");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null);
+
+  // Load products from Supabase
+  useEffect(() => {
+    import('../../lib/api').then(({ fetchSellerProducts }) => {
+      fetchSellerProducts().then(data => {
+        if (data.length > 0) setProducts(data);
+        setIsLoading(false);
+      }).catch(() => setIsLoading(false));
+    });
+  }, []);
 
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());

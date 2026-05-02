@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, Badge, Button } from "../components/ui";
 import { ShieldCheck, TrendingUp, Package, Clock, ArrowRight, ShoppingCart, CheckCircle } from "lucide-react";
@@ -6,6 +7,19 @@ import { useUser } from "../context/UserContext";
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useUser();
+  const [stats, setStats] = useState({ totalProducts: 48, newOrders: 12, totalSales: 124500, verificationStatus: 100 });
+
+  useEffect(() => {
+    import('../../lib/api').then(({ fetchDashboardStats }) => {
+      fetchDashboardStats().then(data => {
+        setStats(prev => ({
+          ...prev,
+          totalProducts: data.totalProducts || prev.totalProducts,
+          newOrders: data.newOrders || prev.newOrders,
+        }));
+      }).catch(() => {});
+    });
+  }, []);
 
   const displayName = user?.companyName
     ? user.companyName
@@ -61,7 +75,7 @@ export function Dashboard() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-gray-500">Новые заказы</p>
-              <p className="text-lg font-bold text-gray-900">12</p>
+              <p className="text-lg font-bold text-gray-900">{stats.newOrders}</p>
             </div>
           </CardContent>
         </Card>
@@ -73,7 +87,7 @@ export function Dashboard() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-gray-500">Активные товары</p>
-              <p className="text-lg font-bold text-gray-900">48</p>
+              <p className="text-lg font-bold text-gray-900">{stats.totalProducts}</p>
             </div>
           </CardContent>
         </Card>
