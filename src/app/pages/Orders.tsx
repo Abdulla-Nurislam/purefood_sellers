@@ -102,6 +102,15 @@ export function Orders() {
       </div>
 
       <div className="p-4 space-y-3 pb-24">
+        {filteredOrders.length === 0 && (
+          <div className="text-center py-16 text-gray-400">
+            <Package className="w-14 h-14 mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-medium text-gray-500">Нет заказов</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {activeTab === 'all' ? 'Заказы от клиентов появятся здесь' : `Нет заказов со статусом «${TABS.find(t => t.id === activeTab)?.label}»`}
+            </p>
+          </div>
+        )}
         {filteredOrders.map(order => {
           const statusInfo = getStatusDisplay(order.status);
           const StatusIcon = statusInfo.icon;

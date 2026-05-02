@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowDownToLine, ArrowUpRight, TrendingUp, Calendar, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router";
+import { ArrowDownToLine, ArrowUpRight, TrendingUp, Calendar, CreditCard, ArrowLeft } from "lucide-react";
 import { Button, Card, CardContent, Badge } from "../components/ui";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ const ALL_PAYMENTS = [
 ];
 
 export function Payments() {
+  const navigate = useNavigate();
   const [visibleCount, setVisibleCount] = useState(3);
 
   const handleWithdraw = () => {
@@ -33,7 +35,12 @@ export function Payments() {
   return (
     <div className="flex flex-col min-h-full bg-gray-50/50">
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-md px-4 py-4 pt-10 border-b border-gray-100 space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Выплаты</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 -ml-2 text-gray-600 hover:bg-gray-100/50 rounded-full w-10 h-10">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Выплаты</h1>
+        </div>
       </div>
 
       <div className="p-4 space-y-6 pb-24">
