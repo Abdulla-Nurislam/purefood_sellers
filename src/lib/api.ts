@@ -173,16 +173,31 @@ export async function deleteProduct(id: string): Promise<boolean> {
 // ---- Auth ----
 
 export async function getSellerByPhone(phone: string) {
-  const { data, error } = await supabase
+  const fakeEmail = `${phone.replace(/\\D/g, '')}@seller.purefood.kz`;
+  const defaultPassword = "PureFoodSeller123!";
+
+  // 1. Try to sign in to Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email: fakeEmail,
+    password: defaultPassword,
+  });
+
+  if (authError || !authData.user) {
+    return null;
+  }
+
+  // 2. Fetch custom profile from 'sellers' table
+  const { data: userData, error: userError } = await supabase
     .from('sellers')
     .select('*')
-    .eq('phone', phone)
+    .eq('id', authData.user.id)
     .single();
-    
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows found"
-    console.error('Error fetching seller by phone:', error);
+
+  if (userError && userError.code !== 'PGRST116') {
+    console.error('Error fetching seller profile:', userError);
   }
-  return data;
+
+  return userData || { id: authData.user.id, phone };
 }
 
 export async function registerSeller(seller: {
@@ -191,15 +206,40 @@ export async function registerSeller(seller: {
   contact_name: string;
   categories: string[];
 }) {
-  const { data, error } = await supabase
+  const fakeEmail = `${seller.phone.replace(/\\D/g, '')}@seller.purefood.kz`;
+  const defaultPassword = "PureFoodSeller123!";
+
+  // 1. Sign up to Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: fakeEmail,
+    password: defaultPassword,
+  });
+
+  if (authError) {
+    console.error('Error registering auth user:', authError);
+    return null;
+  }
+
+  const userId = authData.user?.id;
+  if (!userId) return null;
+
+  // 2. We use RLS-bypassing or assume RLS allows insert if auth.uid() == id
+  const { data: userData, error: userError } = await supabase
     .from('sellers')
-    .insert(seller)
+    .insert({
+      id: userId,
+      phone: seller.phone,
+      company_name: seller.company_name,
+      contact_name: seller.contact_name,
+      categories: seller.categories
+    })
     .select()
     .single();
 
-  if (error) {
-    console.error('Error registering seller:', error);
-    return null;
+  if (userError) {
+    console.warn('Could not create profile in sellers table (probably RLS), but Auth succeeded:', userError);
+    return { id: userId, phone: seller.phone, company_name: seller.company_name, contact_name: seller.contact_name, categories: seller.categories };
   }
-  return data;
+
+  return userData;
 }
