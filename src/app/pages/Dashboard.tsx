@@ -15,8 +15,8 @@ export function Dashboard() {
       fetchDashboardStats(user.id).then(data => {
         setStats(prev => ({
           ...prev,
-          totalProducts: data.totalProducts || prev.totalProducts,
-          newOrders: data.newOrders || prev.newOrders,
+          totalProducts: data.totalProducts ?? prev.totalProducts,
+          newOrders: data.newOrders ?? prev.newOrders,
         }));
       }).catch(() => {});
     });
