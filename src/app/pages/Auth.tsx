@@ -94,37 +94,27 @@ export function Auth() {
     const code = smsCode.join("");
     if (code === "1234") {
       if (isNewUser) {
-        // Registration flow — always show profile form
+        // Registration flow — show profile form
         setStep("profile");
       } else {
-        // Login flow — look up existing account by phone
+        // Login flow — find existing account and log in
+        // NEVER redirect to registration screen
         try {
           const { getSellerByPhone } = await import('../../lib/api');
           const seller = await getSellerByPhone(phone);
-          if (seller && seller.company_name) {
-            // Found existing seller with profile data — log in
+          if (seller && seller.id) {
+            // Account found — log in with whatever data is available
             setUser({
               id: seller.id,
               authMethod: "phone",
               phone: seller.phone || phone,
-              companyName: seller.company_name,
-              contactName: seller.contact_name,
+              companyName: seller.company_name || "",
+              contactName: seller.contact_name || "",
               categories: seller.categories || [],
             });
             navigate("/");
-          } else if (seller && seller.id) {
-            // Auth user exists but no profile in sellers table — go to profile step
-            setUser({
-              id: seller.id,
-              authMethod: "phone",
-              phone: phone,
-              companyName: "",
-              contactName: "",
-              categories: [],
-            });
-            setStep("profile");
           } else {
-            // No account found — show error, don't create new account
+            // No account found — show error, suggest registration
             setSmsError(true);
             setSmsCode(["", "", "", ""]);
             smsRefs[0].current?.focus();

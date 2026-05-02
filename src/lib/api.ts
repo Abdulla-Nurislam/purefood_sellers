@@ -183,22 +183,46 @@ export async function getSellerByPhone(phone: string) {
     password: defaultPassword,
   });
 
-  if (authError || !authData.user) {
-    return null;
+  if (!authError && authData.user) {
+    // Auth login succeeded — fetch profile from sellers table
+    const { data: userData } = await supabase
+      .from('sellers')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    return userData || { id: authData.user.id, phone };
   }
 
-  // 2. Fetch custom profile from 'sellers' table
-  const { data: userData, error: userError } = await supabase
+  // 2. Fallback: try to find seller directly by phone in sellers table
+  // This handles cases where Auth email was created with old broken regex
+  const phoneVariants = [phone, `+${digits}`, `+7${digits.slice(1)}`];
+  
+  for (const phoneVariant of phoneVariants) {
+    const { data: directLookup } = await supabase
+      .from('sellers')
+      .select('*')
+      .eq('phone', phoneVariant)
+      .single();
+    
+    if (directLookup) {
+      return directLookup;
+    }
+  }
+
+  // Also try with the formatted phone that was stored during registration
+  const { data: fuzzyLookup } = await supabase
     .from('sellers')
     .select('*')
-    .eq('id', authData.user.id)
+    .ilike('phone', `%${digits.slice(-10)}%`)
+    .limit(1)
     .single();
 
-  if (userError && userError.code !== 'PGRST116') {
-    console.error('Error fetching seller profile:', userError);
+  if (fuzzyLookup) {
+    return fuzzyLookup;
   }
 
-  return userData || { id: authData.user.id, phone };
+  return null;
 }
 
 export async function registerSeller(seller: {
