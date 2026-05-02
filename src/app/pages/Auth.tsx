@@ -37,6 +37,7 @@ export function Auth() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isNewUser, setIsNewUser] = useState(true);
   const [smsError, setSmsError] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const smsRefs = [
     useRef<HTMLInputElement>(null),
@@ -93,31 +94,55 @@ export function Auth() {
     const code = smsCode.join("");
     if (code === "1234") {
       if (isNewUser) {
+        // Registration flow — always show profile form
         setStep("profile");
       } else {
-        // Fetch existing user login
-        const { getSellerByPhone } = await import('../../lib/api');
-        const seller = await getSellerByPhone(phone);
-        if (seller) {
-          setUser({
-            id: seller.id,
-            authMethod: "phone",
-            phone: seller.phone,
-            companyName: seller.company_name,
-            contactName: seller.contact_name,
-            categories: seller.categories || [],
-          });
-          navigate("/");
-        } else {
-          // If not found in DB, redirect to registration
-          setIsNewUser(true);
-          setStep("profile");
+        // Login flow — look up existing account by phone
+        try {
+          const { getSellerByPhone } = await import('../../lib/api');
+          const seller = await getSellerByPhone(phone);
+          if (seller && seller.company_name) {
+            // Found existing seller with profile data — log in
+            setUser({
+              id: seller.id,
+              authMethod: "phone",
+              phone: seller.phone || phone,
+              companyName: seller.company_name,
+              contactName: seller.contact_name,
+              categories: seller.categories || [],
+            });
+            navigate("/");
+          } else if (seller && seller.id) {
+            // Auth user exists but no profile in sellers table — go to profile step
+            setUser({
+              id: seller.id,
+              authMethod: "phone",
+              phone: phone,
+              companyName: "",
+              contactName: "",
+              categories: [],
+            });
+            setStep("profile");
+          } else {
+            // No account found — show error, don't create new account
+            setSmsError(true);
+            setSmsCode(["", "", "", ""]);
+            smsRefs[0].current?.focus();
+            setLoginError("Аккаунт с этим номером не найден. Зарегистрируйтесь.");
+          }
+        } catch (err) {
+          console.error('Login error:', err);
+          setSmsError(true);
+          setSmsCode(["", "", "", ""]);
+          smsRefs[0].current?.focus();
+          setLoginError("Ошибка при входе. Попробуйте снова.");
         }
       }
     } else {
       setSmsError(true);
       setSmsCode(["", "", "", ""]);
       smsRefs[0].current?.focus();
+      setLoginError("");
     }
   };
 
@@ -132,22 +157,58 @@ export function Auth() {
   };
 
   const handleFinishProfile = async () => {
-    const { registerSeller } = await import('../../lib/api');
-    const newSeller = await registerSeller({
-      phone,
-      company_name: companyName,
-      contact_name: contactName,
-      categories: selectedCategories,
-    });
+    const { registerSeller, getSellerByPhone } = await import('../../lib/api');
+    
+    // If user already has an ID (from login flow detecting missing profile), 
+    // just update the sellers table instead of re-registering
+    let sellerId = (user as any)?.id;
+    
+    if (sellerId) {
+      // User exists in Auth but needs profile — upsert into sellers table
+      const { supabase } = await import('../../lib/supabase');
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('sellers')
+        .upsert({
+          id: sellerId,
+          phone,
+          company_name: companyName,
+          contact_name: contactName,
+          categories: selectedCategories,
+        })
+        .select()
+        .single();
+      
+      if (upsertError) {
+        console.warn('Could not upsert seller profile:', upsertError);
+      }
+      
+      setUser({
+        id: sellerId,
+        authMethod: "phone",
+        phone,
+        companyName,
+        contactName,
+        categories: selectedCategories,
+      });
+    } else {
+      // Fresh registration
+      const newSeller = await registerSeller({
+        phone,
+        company_name: companyName,
+        contact_name: contactName,
+        categories: selectedCategories,
+      });
 
-    setUser({
-      id: newSeller?.id,
-      authMethod: "phone",
-      phone,
-      companyName,
-      contactName,
-      categories: selectedCategories,
-    });
+      setUser({
+        id: newSeller?.id,
+        authMethod: "phone",
+        phone,
+        companyName,
+        contactName,
+        categories: selectedCategories,
+      });
+    }
+    
     navigate("/");
   };
 
@@ -297,10 +358,22 @@ export function Auth() {
               ))}
             </div>
 
-            {smsError && (
+            {smsError && !loginError && (
               <p className="text-red-500 text-sm text-center">
                 Неверный код. Попробуйте снова. (Подсказка: 1234)
               </p>
+            )}
+
+            {loginError && (
+              <div className="text-center space-y-2">
+                <p className="text-red-500 text-sm">{loginError}</p>
+                <button
+                  onClick={() => { setLoginError(""); setIsNewUser(true); setStep("phone"); }}
+                  className="text-emerald-600 text-sm underline"
+                >
+                  Зарегистрироваться
+                </button>
+              </div>
             )}
 
             <button className="text-emerald-600 text-sm text-center">

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 export type AuthMethod = "phone" | "google";
 
 export interface UserData {
+  id?: string;
   authMethod: AuthMethod;
   phone?: string;
   companyName?: string;

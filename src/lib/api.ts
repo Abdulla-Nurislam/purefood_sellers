@@ -173,7 +173,8 @@ export async function deleteProduct(id: string): Promise<boolean> {
 // ---- Auth ----
 
 export async function getSellerByPhone(phone: string) {
-  const fakeEmail = `${phone.replace(/\\D/g, '')}@seller.purefood.kz`;
+  const digits = phone.replace(/\D/g, '');
+  const fakeEmail = `${digits}@seller.purefood.kz`;
   const defaultPassword = "PureFoodSeller123!";
 
   // 1. Try to sign in to Supabase Auth
@@ -206,7 +207,8 @@ export async function registerSeller(seller: {
   contact_name: string;
   categories: string[];
 }) {
-  const fakeEmail = `${seller.phone.replace(/\\D/g, '')}@seller.purefood.kz`;
+  const digits = seller.phone.replace(/\D/g, '');
+  const fakeEmail = `${digits}@seller.purefood.kz`;
   const defaultPassword = "PureFoodSeller123!";
 
   // 1. Sign up to Supabase Auth
