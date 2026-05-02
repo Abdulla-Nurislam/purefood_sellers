@@ -145,52 +145,67 @@ export function Auth() {
     });
     navigate("/");
   };
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFinishProfile = async () => {
-    const { registerSeller, getSellerByPhone } = await import('../../lib/api');
+    if (!companyName.trim()) return;
     
-    // If user already has an ID (from login flow detecting missing profile), 
-    // just update the sellers table instead of re-registering
-    let sellerId = (user as any)?.id;
+    setIsLoading(true);
     
-    if (sellerId) {
-      // User exists in Auth but needs profile — upsert into sellers table
-      const { supabase } = await import('../../lib/supabase');
-      const { data: upsertData, error: upsertError } = await supabase
-        .from('sellers')
-        .upsert({
+    try {
+      const { registerSeller } = await import('../../lib/api');
+      
+      // Check if user already has an ID (from login flow)
+      let sellerId = (user as any)?.id;
+      
+      if (sellerId) {
+        // User exists in Auth but needs profile — upsert into sellers table
+        try {
+          const { supabase } = await import('../../lib/supabase');
+          await supabase
+            .from('sellers')
+            .upsert({
+              id: sellerId,
+              phone,
+              company_name: companyName,
+              contact_name: contactName,
+              categories: selectedCategories,
+            });
+        } catch (e) {
+          console.warn('Could not upsert seller profile:', e);
+        }
+        
+        setUser({
           id: sellerId,
+          authMethod: "phone",
+          phone,
+          companyName,
+          contactName,
+          categories: selectedCategories,
+        });
+      } else {
+        // Fresh registration
+        const newSeller = await registerSeller({
           phone,
           company_name: companyName,
           contact_name: contactName,
           categories: selectedCategories,
-        })
-        .select()
-        .single();
-      
-      if (upsertError) {
-        console.warn('Could not upsert seller profile:', upsertError);
-      }
-      
-      setUser({
-        id: sellerId,
-        authMethod: "phone",
-        phone,
-        companyName,
-        contactName,
-        categories: selectedCategories,
-      });
-    } else {
-      // Fresh registration
-      const newSeller = await registerSeller({
-        phone,
-        company_name: companyName,
-        contact_name: contactName,
-        categories: selectedCategories,
-      });
+        });
 
+        setUser({
+          id: newSeller?.id || `local-${Date.now()}`,
+          authMethod: "phone",
+          phone,
+          companyName,
+          contactName,
+          categories: selectedCategories,
+        });
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      // Fallback: log in locally even if Supabase failed
       setUser({
-        id: newSeller?.id,
+        id: `local-${Date.now()}`,
         authMethod: "phone",
         phone,
         companyName,
@@ -199,6 +214,7 @@ export function Auth() {
       });
     }
     
+    setIsLoading(false);
     navigate("/");
   };
 
@@ -455,10 +471,24 @@ export function Auth() {
           <div className="px-6 pb-10 pt-4">
             <button
               onClick={handleFinishProfile}
-              className="w-full bg-emerald-600 text-white py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
+              disabled={isLoading || !companyName.trim()}
+              className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors ${
+                isLoading || !companyName.trim()
+                  ? "bg-gray-200 text-gray-400"
+                  : "bg-emerald-600 text-white hover:bg-emerald-700"
+              }`}
             >
-              Начать продавать
-              <ArrowRight className="w-5 h-5" />
+              {isLoading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Регистрация...
+                </>
+              ) : (
+                <>
+                  Начать продавать
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </div>
         </div>
