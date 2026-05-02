@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Search, ChevronRight, Package, Truck, CheckCircle2, Clock } from "lucide-react";
 import { Badge, Input, Card } from "../components/ui";
+import { useUser } from "../context/UserContext";
 
 const MOCK_ORDERS = [
   {
@@ -38,13 +39,15 @@ const TABS = [
 ];
 
 export function Orders() {
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState("all");
   const [orders, setOrders] = useState<any[]>(MOCK_ORDERS);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) return;
     import('../../lib/api').then(({ fetchSellerOrders }) => {
-      fetchSellerOrders().then(data => {
+      fetchSellerOrders(user.id).then(data => {
         if (data && data.length > 0) {
           setOrders(data);
         }

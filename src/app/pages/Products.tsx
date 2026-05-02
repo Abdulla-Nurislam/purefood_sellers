@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Badge } from "../components/ui";
 import { toast } from "sonner";
+import { useUser } from "../context/UserContext";
 
 interface Product {
   id: string;
@@ -55,6 +56,7 @@ const CATEGORIES = ["Все", "Злаки", "Сладости", "Крупы", "�
 
 export function Products() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -66,8 +68,9 @@ export function Products() {
 
   // Load products from Supabase
   useEffect(() => {
+    if (!user?.id) return;
     import('../../lib/api').then(({ fetchSellerProducts }) => {
-      fetchSellerProducts().then(data => {
+      fetchSellerProducts(user.id).then(data => {
         if (data.length > 0) setProducts(data);
         setIsLoading(false);
       }).catch(() => setIsLoading(false));

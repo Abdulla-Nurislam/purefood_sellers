@@ -89,21 +89,30 @@ export function Auth() {
     setStep("sms");
   };
 
-  const handleVerifySms = () => {
+  const handleVerifySms = async () => {
     const code = smsCode.join("");
     if (code === "1234") {
       if (isNewUser) {
         setStep("profile");
       } else {
-        // Existing user login
-        setUser({
-          authMethod: "phone",
-          phone,
-          companyName: "",
-          contactName: "",
-          categories: [],
-        });
-        navigate("/");
+        // Fetch existing user login
+        const { getSellerByPhone } = await import('../../lib/api');
+        const seller = await getSellerByPhone(phone);
+        if (seller) {
+          setUser({
+            id: seller.id,
+            authMethod: "phone",
+            phone: seller.phone,
+            companyName: seller.company_name,
+            contactName: seller.contact_name,
+            categories: seller.categories || [],
+          });
+          navigate("/");
+        } else {
+          // If not found in DB, redirect to registration
+          setIsNewUser(true);
+          setStep("profile");
+        }
       }
     } else {
       setSmsError(true);
@@ -122,8 +131,17 @@ export function Auth() {
     navigate("/");
   };
 
-  const handleFinishProfile = () => {
+  const handleFinishProfile = async () => {
+    const { registerSeller } = await import('../../lib/api');
+    const newSeller = await registerSeller({
+      phone,
+      company_name: companyName,
+      contact_name: contactName,
+      categories: selectedCategories,
+    });
+
     setUser({
+      id: newSeller?.id,
       authMethod: "phone",
       phone,
       companyName,

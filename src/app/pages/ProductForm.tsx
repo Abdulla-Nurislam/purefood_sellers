@@ -1,10 +1,19 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, ImagePlus, UploadCloud, Info } from "lucide-react";
 import { Card, CardContent, Button, Input, Label, Textarea, Badge } from "../components/ui";
 import { toast } from "sonner";
+import { useUser } from "../context/UserContext";
 
 export function ProductForm() {
   const navigate = useNavigate();
+  const { user } = useUser();
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("dairy");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
+  const [description, setDescription] = useState("");
+  const [ingredients, setIngredients] = useState("");
 
   const handleUploadCOA = () => {
     toast.loading("Загрузка сертификата...", { id: "coa" });
@@ -20,12 +29,26 @@ export function ProductForm() {
     }, 1500);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!title || !price || !user?.id) {
+      toast.error("Пожалуйста, заполните название и цену");
+      return;
+    }
     toast.loading("Сохранение товара...", { id: "save" });
-    setTimeout(() => {
-      toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
-      navigate(-1);
-    }, 1500);
+    
+    const { addProduct } = await import('../../lib/api');
+    await addProduct({
+      name: title,
+      price: parseInt(price) || 0,
+      description: description,
+      category_id: category,
+      seller_id: user.id,
+      image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080', // generic placeholder
+      badges: ['Проверенный состав'],
+    });
+
+    toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
+    navigate(-1);
   };
 
   return (
@@ -58,41 +81,42 @@ export function ProductForm() {
           <CardContent className="p-5 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title" className="text-gray-700">Название товара</Label>
-              <Input id="title" placeholder="Например: Органический зеленый чай" className="bg-gray-50/50 border-gray-200" />
+              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например: Органический зеленый чай" className="bg-gray-50/50 border-gray-200" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category" className="text-gray-700">Категория</Label>
-              <select id="category" className="flex h-10 w-full rounded-md border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
-                <option>Выберите категорию...</option>
-                <option>Злаки</option>
-                <option>Напитки</option>
-                <option>Суперфуды</option>
-                <option>Сладости</option>
+              <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex h-10 w-full rounded-md border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
+                <option value="dairy">Молочные</option>
+                <option value="honey">Мёд</option>
+                <option value="bread">Хлеб</option>
+                <option value="fruits">Фрукты</option>
+                <option value="nuts">Орехи</option>
+                <option value="tea">Чай</option>
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price" className="text-gray-700">Цена (₽)</Label>
-                <Input id="price" type="number" placeholder="0.00" className="bg-gray-50/50 border-gray-200" />
+                <Input id="price" value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="0.00" className="bg-gray-50/50 border-gray-200" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock" className="text-gray-700">Остаток (шт)</Label>
-                <Input id="stock" type="number" placeholder="0" className="bg-gray-50/50 border-gray-200" />
+                <Input id="stock" value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="0" className="bg-gray-50/50 border-gray-200" />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="description" className="text-gray-700">Описание продукта</Label>
-              <Textarea id="description" placeholder="Опишите ваш товар..." className="bg-gray-50/50 border-gray-200 min-h-[100px]" />
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Опишите ваш товар..." className="bg-gray-50/50 border-gray-200 min-h-[100px]" />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="ingredients" className="text-gray-700 flex items-center gap-1.5">
                 Состав <Info className="w-3.5 h-3.5 text-gray-400" />
               </Label>
-              <Textarea id="ingredients" placeholder="100% органические ингредиенты..." className="bg-gray-50/50 border-gray-200 h-20" />
+              <Textarea id="ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="100% органические ингредиенты..." className="bg-gray-50/50 border-gray-200 h-20" />
               <p className="text-[10px] text-gray-500">Платформа PureFood требует полного раскрытия состава.</p>
             </div>
           </CardContent>

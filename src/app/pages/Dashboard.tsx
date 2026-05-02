@@ -10,8 +10,9 @@ export function Dashboard() {
   const [stats, setStats] = useState({ totalProducts: 48, newOrders: 12, totalSales: 124500, verificationStatus: 100 });
 
   useEffect(() => {
+    if (!user?.id) return;
     import('../../lib/api').then(({ fetchDashboardStats }) => {
-      fetchDashboardStats().then(data => {
+      fetchDashboardStats(user.id).then(data => {
         setStats(prev => ({
           ...prev,
           totalProducts: data.totalProducts || prev.totalProducts,
@@ -30,7 +31,7 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-6 p-4 pt-10 pb-8 min-h-full bg-gray-50/50">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">С возвращением, {displayName}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Добро пожаловать, {displayName}</h1>
         <p className="text-sm text-gray-500">Ваша сводка на сегодня</p>
       </div>
 

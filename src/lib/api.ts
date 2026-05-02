@@ -87,11 +87,17 @@ export async function fetchSellerOrders(sellerId?: string): Promise<SellerOrder[
 // ---- Dashboard Stats ----
 
 export async function fetchDashboardStats(sellerId?: string) {
+  let productsQuery = supabase.from('products').select('id', { count: 'exact', head: true });
+  let ordersQuery = supabase.from('orders').select('id', { count: 'exact', head: true });
+
+  if (sellerId) {
+    productsQuery = productsQuery.eq('seller_id', sellerId);
+    ordersQuery = ordersQuery.eq('seller_id', sellerId);
+  }
+
   const [productsRes, ordersRes] = await Promise.all([
-    supabase.from('products').select('id', { count: 'exact', head: true })
-      .then(r => r.count || 0),
-    supabase.from('orders').select('id', { count: 'exact', head: true })
-      .then(r => r.count || 0),
+    productsQuery.then(r => r.count || 0),
+    ordersQuery.then(r => r.count || 0),
   ]);
 
   return {
@@ -162,4 +168,38 @@ export async function deleteProduct(id: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+// ---- Auth ----
+
+export async function getSellerByPhone(phone: string) {
+  const { data, error } = await supabase
+    .from('sellers')
+    .select('*')
+    .eq('phone', phone)
+    .single();
+    
+  if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows found"
+    console.error('Error fetching seller by phone:', error);
+  }
+  return data;
+}
+
+export async function registerSeller(seller: {
+  phone: string;
+  company_name: string;
+  contact_name: string;
+  categories: string[];
+}) {
+  const { data, error } = await supabase
+    .from('sellers')
+    .insert(seller)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error registering seller:', error);
+    return null;
+  }
+  return data;
 }
