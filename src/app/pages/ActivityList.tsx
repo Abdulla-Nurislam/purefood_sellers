@@ -5,7 +5,7 @@ import { Button, Card } from "../components/ui";
 const ACTIVITIES = [
   { id: 1, title: 'Новый заказ #4021', time: '10 мин назад', icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
   { id: 2, title: 'Товар "Органическая Гречка" одобрен', time: '2 часа назад', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-  { id: 3, title: 'Выплата ₽45,000 обработана', time: 'Вчера', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { id: 3, title: 'Выплата ₸45,000 обработана', time: 'Вчера', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
   { id: 4, title: 'Новый заказ #4020', time: 'Вчера', icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
   { id: 5, title: 'Товар "Сырой мёд" на модерации', time: '2 дня назад', icon: Package, color: 'text-purple-500', bg: 'bg-purple-50' },
   { id: 6, title: 'Новый отзыв на "Киноа премиум"', time: '3 дня назад', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-50' },

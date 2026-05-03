@@ -47,7 +47,7 @@ export async function fetchSellerProducts(sellerId?: string): Promise<SellerProd
     id: p.id,
     name: p.name,
     category: p.tags?.[0] || 'Без категории',
-    price: `₽${p.price?.toLocaleString() || 0}`,
+    price: `₸${p.price?.toLocaleString() || 0}`,
     stock: 100, // stock isn't in DB yet, default
     status: p.badges?.includes('Проверенный состав') ? 'Verified' : 'Pending',
     image: p.image_url,
@@ -78,7 +78,7 @@ export async function fetchSellerOrders(sellerId?: string): Promise<SellerOrder[
     id: o.id,
     client: 'Клиент',
     date: new Date(o.created_at).toLocaleDateString('ru-RU'),
-    total: `₽${o.total?.toLocaleString() || 0}`,
+    total: `₸${o.total?.toLocaleString() || 0}`,
     status: o.status || 'new',
     items: o.order_items?.[0]?.count || 0,
   }));

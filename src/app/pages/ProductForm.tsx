@@ -98,7 +98,7 @@ export function ProductForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="price" className="text-gray-700">Цена (₽)</Label>
+                <Label htmlFor="price" className="text-gray-700">Цена (₸)</Label>
                 <Input id="price" value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="0.00" className="bg-gray-50/50 border-gray-200" />
               </div>
               <div className="space-y-2">

@@ -458,7 +458,7 @@ export function Auth() {
                 <input
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Иван Петров"
+                  placeholder="Азамат Сериков"
                   className="flex-1 bg-transparent outline-none"
                 />
               </div>

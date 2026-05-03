@@ -5,12 +5,12 @@ import { Button, Card, CardContent, Badge } from "../components/ui";
 import { toast } from "sonner";
 
 const ALL_PAYMENTS = [
-  { id: "TRX-1029", date: "Сегодня, 10:00", amount: "+ ₽45,000", status: "Completed", type: "payout" },
-  { id: "TRX-1028", date: "12 Октября", amount: "+ ₽12,500", status: "Completed", type: "payout" },
-  { id: "TRX-1027", date: "10 Октября", amount: "- ₽1,250", status: "Completed", type: "fee" },
-  { id: "TRX-1026", date: "8 Октября", amount: "+ ₽8,200", status: "Completed", type: "payout" },
-  { id: "TRX-1025", date: "5 Октября", amount: "- ₽950", status: "Completed", type: "fee" },
-  { id: "TRX-1024", date: "1 Октября", amount: "+ ₽22,000", status: "Completed", type: "payout" },
+  { id: "TRX-1029", date: "Сегодня, 10:00", amount: "+ ₸45,000", status: "Completed", type: "payout" },
+  { id: "TRX-1028", date: "12 Октября", amount: "+ ₸12,500", status: "Completed", type: "payout" },
+  { id: "TRX-1027", date: "10 Октября", amount: "- ₸1,250", status: "Completed", type: "fee" },
+  { id: "TRX-1026", date: "8 Октября", amount: "+ ₸8,200", status: "Completed", type: "payout" },
+  { id: "TRX-1025", date: "5 Октября", amount: "- ₸950", status: "Completed", type: "fee" },
+  { id: "TRX-1024", date: "1 Октября", amount: "+ ₸22,000", status: "Completed", type: "payout" },
 ];
 
 export function Payments() {
@@ -18,7 +18,7 @@ export function Payments() {
   const [visibleCount, setVisibleCount] = useState(3);
 
   const handleWithdraw = () => {
-    toast.success("Заявка на вывод ₽124,500 отправлена. Средства поступят в течение 1-3 рабочих дней.");
+    toast.success("Заявка на вывод ₸124,500 отправлена. Средства поступят в течение 1-3 рабочих дней.");
   };
 
   const handleLoadMore = () => {
@@ -52,7 +52,7 @@ export function Payments() {
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-gray-400">Доступно к выводу</p>
-                <h2 className="text-3xl font-bold tracking-tight">₽124,500<span className="text-gray-400 text-lg">.00</span></h2>
+                <h2 className="text-3xl font-bold tracking-tight">₸124,500<span className="text-gray-400 text-lg">.00</span></h2>
               </div>
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
                 <CreditCard className="w-5 h-5 text-emerald-400" />

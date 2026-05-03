@@ -64,7 +64,7 @@ export function Dashboard() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-gray-500">Сумма продаж</p>
-              <p className="text-lg font-bold text-gray-900">₽124,500</p>
+              <p className="text-lg font-bold text-gray-900">₸124,500</p>
             </div>
           </CardContent>
         </Card>
@@ -117,7 +117,7 @@ export function Dashboard() {
             {[
               { id: 1, title: 'Новый заказ #4021', time: '10 мин назад', icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
               { id: 2, title: 'Товар "Органическая Гречка" одобрен', time: '2 часа назад', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-              { id: 3, title: 'Выплата ₽45,000 обработана', time: 'Вчера', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
+              { id: 3, title: 'Выплата ₸45,000 обработана', time: 'Вчера', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
             ].map((activity) => (
               <div key={activity.id} className="flex items-start gap-4 p-4 hover:bg-gray-50/50 transition-colors">
                 <div className={`p-2 rounded-full ${activity.bg}`}>

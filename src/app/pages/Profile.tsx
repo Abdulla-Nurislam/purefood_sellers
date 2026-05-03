@@ -204,7 +204,7 @@ export function Profile() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={!editing}
                     type="email"
-                    placeholder="example@mail.ru"
+                    placeholder="example@mail.kz"
                     className={inputClass(editing)}
                   />
                 </div>
@@ -233,7 +233,7 @@ export function Profile() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     disabled={!editing}
-                    placeholder="г. Москва, ул. Примерная, д. 1"
+                    placeholder="г. Алматы, пр. Абая, д. 1"
                     className={`w-full resize-none border-0 border-b focus:ring-0 focus:outline-none bg-transparent text-sm font-medium p-0 ${
                       editing
                         ? "border-gray-300 text-gray-900 focus:border-emerald-600"
