@@ -38,6 +38,7 @@ export function Auth() {
   const [isNewUser, setIsNewUser] = useState(true);
   const [smsError, setSmsError] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const smsRefs = [
     useRef<HTMLInputElement>(null),
@@ -161,7 +162,6 @@ export function Auth() {
       navigate("/");
     }
   };
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleFinishProfile = async () => {
     if (!companyName.trim()) return;
