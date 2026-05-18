@@ -4,6 +4,15 @@ import { supabase } from './supabase';
 // Seller App API — функции для работы с Supabase
 // ============================================================
 
+// ---- Activity Types ----
+
+export interface SellerActivity {
+  id: string;
+  title: string;
+  type: 'order' | 'product' | 'payout' | 'review' | 'delivery';
+  created_at: string;
+}
+
 export interface SellerProduct {
   id: string;
   name: string;
@@ -60,7 +69,7 @@ export async function fetchSellerProducts(sellerId?: string): Promise<SellerProd
 export async function fetchSellerOrders(sellerId?: string): Promise<SellerOrder[]> {
   let query = supabase
     .from('orders')
-    .select('*, order_items(count)')
+    .select('*, order_items(count), users(name, phone)')
     .order('created_at', { ascending: false });
 
   if (sellerId) {
@@ -74,14 +83,29 @@ export async function fetchSellerOrders(sellerId?: string): Promise<SellerOrder[
     return [];
   }
 
-  return (data || []).map(o => ({
-    id: o.id,
-    client: 'Клиент',
-    date: new Date(o.created_at).toLocaleDateString('ru-RU'),
-    total: `₸${o.total?.toLocaleString() || 0}`,
-    status: o.status || 'new',
-    items: o.order_items?.[0]?.count || 0,
-  }));
+  return (data || []).map(o => {
+    const userName = (o as any).users?.name || (o as any).users?.phone || 'Клиент';
+    const now = new Date();
+    const created = new Date(o.created_at);
+    const diffMs = now.getTime() - created.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    let dateStr: string;
+    if (diffDays === 0) {
+      dateStr = `Сегодня, ${created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      dateStr = `Вчера, ${created.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      dateStr = created.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return {
+      id: o.id,
+      client: userName,
+      date: dateStr,
+      total: `₸${o.total?.toLocaleString() || 0}`,
+      status: o.status || 'new',
+      items: o.order_items?.[0]?.count || 0,
+    };
+  });
 }
 
 // ---- Dashboard Stats ----
@@ -89,23 +113,107 @@ export async function fetchSellerOrders(sellerId?: string): Promise<SellerOrder[
 export async function fetchDashboardStats(sellerId?: string) {
   let productsQuery = supabase.from('products').select('id', { count: 'exact', head: true });
   let ordersQuery = supabase.from('orders').select('id', { count: 'exact', head: true });
+  let newOrdersQuery = supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'new');
 
   if (sellerId) {
     productsQuery = productsQuery.eq('seller_id', sellerId);
     ordersQuery = ordersQuery.eq('seller_id', sellerId);
+    newOrdersQuery = newOrdersQuery.eq('seller_id', sellerId);
   }
 
-  const [productsRes, ordersRes] = await Promise.all([
+  const [productsRes, ordersRes, newOrdersRes] = await Promise.all([
     productsQuery.then(r => r.count || 0),
     ordersQuery.then(r => r.count || 0),
+    newOrdersQuery.then(r => r.count || 0),
   ]);
+
+  // Compute total sales from delivered orders
+  const totalSales = await fetchTotalSales(sellerId);
 
   return {
     totalProducts: productsRes,
-    newOrders: ordersRes,
-    totalSales: 0, // Will be computed when payments are tracked
+    totalOrders: ordersRes,
+    newOrders: newOrdersRes,
+    totalSales,
     verificationStatus: 100,
   };
+}
+
+// ---- Total Sales ----
+
+export async function fetchTotalSales(sellerId?: string): Promise<number> {
+  let query = supabase
+    .from('orders')
+    .select('total')
+    .in('status', ['delivered', 'shipped', 'processing']);
+
+  if (sellerId) {
+    query = query.eq('seller_id', sellerId);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return 0;
+  return data.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+}
+
+// ---- Activities ----
+
+export async function fetchSellerActivities(sellerId: string): Promise<SellerActivity[]> {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('seller_id', sellerId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('Error fetching activities:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createSellerActivity(
+  sellerId: string,
+  title: string,
+  type: 'order' | 'product' | 'payout' | 'review' | 'delivery'
+) {
+  const { error } = await supabase
+    .from('activities')
+    .insert({ seller_id: sellerId, title, type });
+
+  if (error) {
+    console.error('Error creating activity:', error);
+  }
+}
+
+// ---- Order Details ----
+
+export async function fetchOrderById(orderId: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*, products(name, price, image_url)), users(name, phone)')
+    .eq('id', orderId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching order:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
+  const { error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('Error updating order status:', error);
+    return false;
+  }
+  return true;
 }
 
 // ---- Add / Update / Delete Products ----

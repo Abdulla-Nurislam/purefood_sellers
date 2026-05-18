@@ -36,7 +36,7 @@ export function ProductForm() {
     }
     toast.loading("Сохранение товара...", { id: "save" });
     
-    const { addProduct } = await import('../../lib/api');
+    const { addProduct, createSellerActivity } = await import('../../lib/api');
     await addProduct({
       name: title,
       price: parseInt(price) || 0,
@@ -46,6 +46,9 @@ export function ProductForm() {
       image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080', // generic placeholder
       badges: ['Проверенный состав'],
     });
+
+    // Log activity for the seller's feed
+    await createSellerActivity(user.id, `Товар «${title}» добавлен на проверку`, 'product');
 
     toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
     navigate(-1);

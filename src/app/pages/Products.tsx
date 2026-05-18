@@ -19,45 +19,12 @@ interface Product {
   description?: string;
 }
 
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Органические овсяные хлопья",
-    category: "Злаки",
-    price: "₸350",
-    stock: 120,
-    status: "Verified",
-    image: "https://images.unsplash.com/photo-1634582872934-be411573f235?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvcmdhbmljJTIwcm9sbGVkJTIwb2F0cyUyMGJvd2x8ZW58MXx8fHwxNzc0ODczNTk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    description: "Цельнозерновые овсяные хлопья холодного отжима. Без глютена, без сахара. Идеально для завтрака.",
-  },
-  {
-    id: "2",
-    name: "Сырой дикий мёд",
-    category: "Сладости",
-    price: "₸850",
-    stock: 45,
-    status: "Pending",
-    image: "https://images.unsplash.com/photo-1719871766551-b9ecf87eee51?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvcmdhbmljJTIwcmF3JTIwaG9uZXklMjBqYXJ8ZW58MXx8fHwxNzc0ODczNTk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    description: "Натуральный дикий мёд, собранный вручную. Содержит все природные ферменты и витамины.",
-  },
-  {
-    id: "3",
-    name: "Киноа премиум (белая)",
-    category: "Крупы",
-    price: "₸540",
-    stock: 0,
-    status: "Action Needed",
-    image: "https://images.unsplash.com/photo-1762631935060-642a9e33ddba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvcmdhbmljJTIwcXVpbm9hJTIwaGVhbHRoeXxlbnwxfHx8fDE3NzQ4NzM1OTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    description: "Белая киноа высшего сорта. Богата белком и аминокислотами. Нет в наличии — требуется пополнение склада.",
-  },
-];
-
 const CATEGORIES = ["Все", "Злаки", "Сладости", "Крупы", "Напитки"];
 
 export function Products() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
@@ -71,11 +38,11 @@ export function Products() {
     if (!user?.id) return;
     import('../../lib/api').then(({ fetchSellerProducts }) => {
       fetchSellerProducts(user.id).then(data => {
-        if (data.length > 0) setProducts(data);
+        setProducts(data);
         setIsLoading(false);
       }).catch(() => setIsLoading(false));
     });
-  }, []);
+  }, [user?.id]);
 
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -156,7 +123,8 @@ export function Products() {
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <PackageOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">Товары не найдены</p>
+            <p className="text-sm font-medium text-gray-500">{search || selectedCategory !== 'Все' ? 'Товары не найдены' : 'Добавьте свой первый товар'}</p>
+            <p className="text-xs text-gray-400 mt-1">{search || selectedCategory !== 'Все' ? 'Попробуйте изменить параметры поиска' : 'Нажмите + чтобы начать'}</p>
           </div>
         )}
         {filtered.map((product) => (

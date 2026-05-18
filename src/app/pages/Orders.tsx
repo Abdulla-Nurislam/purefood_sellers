@@ -3,33 +3,7 @@ import { Link } from "react-router";
 import { Search, ChevronRight, Package, Truck, CheckCircle2, Clock } from "lucide-react";
 import { Badge, Input, Card } from "../components/ui";
 import { useUser } from "../context/UserContext";
-
-const MOCK_ORDERS = [
-  {
-    id: "1234",
-    client: "Айгерим Оспанова",
-    date: "Сегодня, 14:30",
-    total: "₸1,250",
-    status: "new",
-    items: 2,
-  },
-  {
-    id: "1233",
-    client: "Азамат Сериков",
-    date: "Вчера, 09:15",
-    total: "₸3,400",
-    status: "processing",
-    items: 5,
-  },
-  {
-    id: "1230",
-    client: "Аружан Нурланова",
-    date: "12 Окт 2023",
-    total: "₸850",
-    status: "shipped",
-    items: 1,
-  },
-];
+import { supabase } from "../../lib/supabase";
 
 const TABS = [
   { id: "all", label: "Все" },
@@ -41,21 +15,39 @@ const TABS = [
 export function Orders() {
   const { user } = useUser();
   const [activeTab, setActiveTab] = useState("all");
-  const [orders, setOrders] = useState<any[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadOrders = async () => {
+    if (!user?.id) return;
+    const { fetchSellerOrders } = await import('../../lib/api');
+    const data = await fetchSellerOrders(user.id);
+    setOrders(data);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, [user?.id]);
+
+  // Realtime subscription for new orders
   useEffect(() => {
     if (!user?.id) return;
-    import('../../lib/api').then(({ fetchSellerOrders }) => {
-      fetchSellerOrders(user.id).then(data => {
-        if (data && data.length > 0) {
-          setOrders(data);
-        }
-        setIsLoading(false);
-      }).catch(() => setIsLoading(false));
-    });
-  }, []);
+    const channel = supabase
+      .channel('seller-orders-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `seller_id=eq.${user.id}`,
+      }, () => {
+        loadOrders();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
+  const newOrdersCount = orders.filter(o => o.status === 'new').length;
   const filteredOrders = activeTab === "all" 
     ? orders 
     : orders.filter(o => o.status === activeTab);
@@ -95,7 +87,7 @@ export function Orders() {
               }`}
             >
               {tab.label}
-              {tab.id === 'new' && <span className="ml-1.5 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">1</span>}
+              {tab.id === 'new' && newOrdersCount > 0 && <span className="ml-1.5 bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{newOrdersCount}</span>}
             </button>
           ))}
         </div>

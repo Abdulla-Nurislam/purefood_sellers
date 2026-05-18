@@ -1,26 +1,65 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, Badge, Button } from "../components/ui";
-import { ShieldCheck, TrendingUp, Package, Clock, ArrowRight, ShoppingCart, CheckCircle } from "lucide-react";
+import { ShieldCheck, TrendingUp, Package, Clock, ArrowRight, ShoppingCart, CheckCircle, Inbox } from "lucide-react";
 import { useUser } from "../context/UserContext";
+import type { SellerActivity } from "../../lib/api";
+
+function getActivityIcon(type: string) {
+  switch (type) {
+    case 'order': return { icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' };
+    case 'product': return { icon: Package, color: 'text-purple-500', bg: 'bg-purple-50' };
+    case 'payout': return { icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' };
+    case 'review': return { icon: CheckCircle, color: 'text-yellow-500', bg: 'bg-yellow-50' };
+    case 'delivery': return { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' };
+    default: return { icon: Package, color: 'text-gray-500', bg: 'bg-gray-50' };
+  }
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'Только что';
+  if (diffMins < 60) return `${diffMins} мин назад`;
+  if (diffHours < 24) return `${diffHours} ч назад`;
+  if (diffDays === 1) return 'Вчера';
+  if (diffDays < 7) return `${diffDays} дня назад`;
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const [stats, setStats] = useState({ totalProducts: 48, newOrders: 12, totalSales: 124500, verificationStatus: 100 });
+  const [stats, setStats] = useState({ totalProducts: 0, newOrders: 0, totalSales: 0, verificationStatus: 100 });
+  const [recentActivities, setRecentActivities] = useState<SellerActivity[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
+    // Load dashboard stats
     import('../../lib/api').then(({ fetchDashboardStats }) => {
       fetchDashboardStats(user.id).then(data => {
         setStats(prev => ({
           ...prev,
           totalProducts: data.totalProducts ?? prev.totalProducts,
           newOrders: data.newOrders ?? prev.newOrders,
+          totalSales: data.totalSales ?? prev.totalSales,
         }));
       }).catch(() => {});
     });
-  }, []);
+    // Load recent activities (last 3)
+    import('../../lib/api').then(({ fetchSellerActivities }) => {
+      fetchSellerActivities(user.id!).then(data => {
+        setRecentActivities(data.slice(0, 3));
+        setIsLoadingActivities(false);
+      }).catch(() => setIsLoadingActivities(false));
+    });
+  }, [user?.id]);
 
   const displayName = user?.companyName
     ? user.companyName
@@ -64,7 +103,7 @@ export function Dashboard() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-gray-500">Сумма продаж</p>
-              <p className="text-lg font-bold text-gray-900">₸124,500</p>
+              <p className="text-lg font-bold text-gray-900">₸{stats.totalSales.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -112,25 +151,40 @@ export function Dashboard() {
           <Button variant="ghost" size="sm" className="text-gray-500 text-xs" onClick={() => navigate("/activity")}>Показать все</Button>
         </div>
         
-        <Card className="border-gray-100 shadow-sm">
-          <div className="divide-y divide-gray-50">
-            {[
-              { id: 1, title: 'Новый заказ #4021', time: '10 мин назад', icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
-              { id: 2, title: 'Товар "Органическая Гречка" одобрен', time: '2 часа назад', icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-              { id: 3, title: 'Выплата ₸45,000 обработана', time: 'Вчера', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
-            ].map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 p-4 hover:bg-gray-50/50 transition-colors">
-                <div className={`p-2 rounded-full ${activity.bg}`}>
-                  <activity.icon className={`w-4 h-4 ${activity.color}`} />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium text-gray-900 leading-none">{activity.title}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        {isLoadingActivities ? (
+          <Card className="border-gray-100 shadow-sm">
+            <div className="p-8 text-center">
+              <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            </div>
+          </Card>
+        ) : recentActivities.length === 0 ? (
+          <Card className="border-gray-100 shadow-sm">
+            <div className="p-8 text-center text-gray-400">
+              <Inbox className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-medium text-gray-500">Здесь пока пусто</p>
+              <p className="text-xs text-gray-400 mt-1">Добавьте товар или дождитесь первого заказа</p>
+            </div>
+          </Card>
+        ) : (
+          <Card className="border-gray-100 shadow-sm">
+            <div className="divide-y divide-gray-50">
+              {recentActivities.map((activity) => {
+                const { icon: Icon, color, bg } = getActivityIcon(activity.type);
+                return (
+                  <div key={activity.id} className="flex items-start gap-4 p-4 hover:bg-gray-50/50 transition-colors">
+                    <div className={`p-2 rounded-full ${bg}`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium text-gray-900 leading-none">{activity.title}</p>
+                      <p className="text-xs text-gray-500">{formatRelativeTime(activity.created_at)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
