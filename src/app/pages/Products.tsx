@@ -214,13 +214,16 @@ export function Products() {
         <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />
       )}
 
-      {/* FAB */}
-      <button
-        onClick={() => navigate("/products/new")}
-        className="fixed bottom-24 right-6 z-20 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 text-white flex items-center justify-center transition-colors"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      {/* FAB — centered for mobile reachability */}
+      <div className="fixed bottom-24 left-0 right-0 z-20 flex justify-center pointer-events-none">
+        <button
+          onClick={() => navigate("/products/new")}
+          className="pointer-events-auto flex items-center gap-2 h-12 px-6 rounded-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 text-white transition-all active:scale-95"
+        >
+          <Plus className="h-5 w-5" />
+          <span className="text-sm font-semibold">Добавить товар</span>
+        </button>
+      </div>
 
       {/* Product Preview Modal */}
       {previewProduct && (

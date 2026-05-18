@@ -1,19 +1,35 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, ImagePlus, UploadCloud, Info } from "lucide-react";
+import { ArrowLeft, ImagePlus, UploadCloud, Info, X } from "lucide-react";
 import { Card, CardContent, Button, Input, Label, Textarea, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
 
+// Format number with thousand separators (1500 -> "1 500")
+function formatNumber(val: string): string {
+  const num = val.replace(/\D/g, '');
+  if (!num) return '';
+  return Number(num).toLocaleString('ru-RU');
+}
+
+// Extract raw digits from formatted string
+function rawDigits(val: string): string {
+  return val.replace(/\D/g, '');
+}
+
 export function ProductForm() {
   const navigate = useNavigate();
   const { user } = useUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("dairy");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState("");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const handleUploadCOA = () => {
     toast.loading("Загрузка сертификата...", { id: "coa" });
@@ -22,11 +38,39 @@ export function ProductForm() {
     }, 1500);
   };
 
-  const handleUploadPhoto = () => {
-    toast.loading("Загрузка фото...", { id: "photo" });
-    setTimeout(() => {
-      toast.success("Фото загружено", { id: "photo" });
-    }, 1500);
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Файл слишком большой. Максимум 5 МБ");
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Пожалуйста, выберите изображение (PNG, JPG)");
+      return;
+    }
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhotoPreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    toast.success("Фото загружено");
+  };
+
+  const removePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSave = async () => {
@@ -43,7 +87,7 @@ export function ProductForm() {
       description: description,
       category_id: category,
       seller_id: user.id,
-      image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080', // generic placeholder
+      image_url: photoPreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
       badges: ['Проверенный состав'],
     });
 
@@ -52,6 +96,19 @@ export function ProductForm() {
 
     toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
     navigate(-1);
+  };
+
+  const priceDisplay = formatNumber(price);
+  const stockDisplay = formatNumber(stock);
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = rawDigits(e.target.value);
+    setPrice(digits);
+  };
+
+  const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = rawDigits(e.target.value);
+    setStock(digits);
   };
 
   return (
@@ -64,20 +121,46 @@ export function ProductForm() {
       </div>
 
       <div className="p-4 space-y-6 pb-24">
+        {/* Photo upload with real file picker */}
         <div className="space-y-2">
           <Label className="text-gray-900 font-semibold">Фотографии товара</Label>
-          <div
-            className="h-40 w-full rounded-2xl border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors"
-            onClick={handleUploadPhoto}
-          >
-            <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
-              <ImagePlus className="h-6 w-6" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handlePhotoChange}
+          />
+          {photoPreview ? (
+            <div className="relative h-48 w-full rounded-2xl overflow-hidden border border-gray-200">
+              <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+              <button
+                onClick={removePhoto}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handlePhotoClick}
+                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-700 shadow-sm hover:bg-white transition-colors"
+              >
+                Заменить
+              </button>
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-emerald-600">Нажмите для загрузки</p>
-              <p className="text-xs text-gray-500 mt-1">PNG, JPG, до 5 МБ</p>
+          ) : (
+            <div
+              className="h-40 w-full rounded-2xl border-2 border-dashed border-gray-200 bg-white flex flex-col items-center justify-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={handlePhotoClick}
+            >
+              <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
+                <ImagePlus className="h-6 w-6" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-emerald-600">Нажмите для загрузки</p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG, до 5 МБ</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <Card className="border-gray-100 shadow-sm overflow-hidden">
@@ -99,14 +182,35 @@ export function ProductForm() {
               </select>
             </div>
 
+            {/* Formatted number inputs — integers only, with thousand separators */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price" className="text-gray-700">Цена (₸)</Label>
-                <Input id="price" value={price} onChange={(e) => setPrice(e.target.value)} type="number" placeholder="0.00" className="bg-gray-50/50 border-gray-200" />
+                <div className="relative">
+                  <Input
+                    id="price"
+                    value={priceDisplay}
+                    onChange={handlePriceChange}
+                    inputMode="numeric"
+                    placeholder="0"
+                    className="bg-gray-50/50 border-gray-200 pr-8 text-base font-semibold"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₸</span>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock" className="text-gray-700">Остаток (шт)</Label>
-                <Input id="stock" value={stock} onChange={(e) => setStock(e.target.value)} type="number" placeholder="0" className="bg-gray-50/50 border-gray-200" />
+                <div className="relative">
+                  <Input
+                    id="stock"
+                    value={stockDisplay}
+                    onChange={handleStockChange}
+                    inputMode="numeric"
+                    placeholder="0"
+                    className="bg-gray-50/50 border-gray-200 pr-10 text-base font-semibold"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">шт</span>
+                </div>
               </div>
             </div>
 
@@ -158,6 +262,7 @@ export function ProductForm() {
           Сохранить и отправить на проверку
         </Button>
       </div>
+
     </div>
   );
 }
