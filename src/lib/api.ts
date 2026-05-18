@@ -55,10 +55,10 @@ export async function fetchSellerProducts(sellerId?: string): Promise<SellerProd
   return (data || []).map(p => ({
     id: p.id,
     name: p.name,
-    category: p.tags?.[0] || 'Без категории',
+    category: p.tags?.[0] || p.category_id || 'Без категории',
     price: `₸${p.price?.toLocaleString() || 0}`,
-    stock: 100, // stock isn't in DB yet, default
-    status: p.badges?.includes('Проверенный состав') ? 'Verified' : 'Pending',
+    stock: p.stock ?? 100,
+    status: p.is_active ? 'Verified' : 'Pending',
     image: p.image_url,
     description: p.description,
   }));
@@ -227,6 +227,7 @@ export async function addProduct(product: {
   seller_id?: string;
   tags?: string[];
   badges?: string[];
+  is_active?: boolean;
 }) {
   const { data, error } = await supabase
     .from('products')

@@ -12,6 +12,7 @@ import { Auth } from "./pages/Auth";
 import { Settings } from "./pages/Settings";
 import { VerificationInfo } from "./pages/VerificationInfo";
 import { ActivityList } from "./pages/ActivityList";
+import { ProductVerification } from "./pages/ProductVerification";
 
 export const router = createBrowserRouter([
   { path: "/auth", Component: Auth },
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
   },
   { path: "products/new", Component: ProductForm },
   { path: "products/:id/edit", Component: ProductForm },
+  { path: "products/:id/verify", Component: ProductVerification },
   { path: "orders/:id", Component: OrderDetails },
   { path: "settings", Component: Settings },
   { path: "verification-info", Component: VerificationInfo },

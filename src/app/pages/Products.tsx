@@ -131,7 +131,7 @@ export function Products() {
           <div
             key={product.id}
             className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm flex gap-4 cursor-pointer hover:border-emerald-200 transition-colors relative"
-            onClick={() => navigate(`/products/${product.id}/edit`)}
+            onClick={() => product.status === 'Pending' ? navigate(`/products/${product.id}/verify`) : navigate(`/products/${product.id}/edit`)}
           >
             <div className="h-20 w-20 shrink-0 bg-gray-100 rounded-lg overflow-hidden relative border border-gray-50">
               <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
@@ -192,6 +192,16 @@ export function Products() {
                   }}
                 >
                   <Eye className="w-4 h-4" /> Просмотр
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(null);
+                    navigate(`/products/${product.id}/verify`);
+                  }}
+                >
+                  <ShieldCheck className="w-4 h-4" /> Верификация
                 </button>
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
