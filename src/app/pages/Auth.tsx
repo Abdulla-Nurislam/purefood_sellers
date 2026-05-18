@@ -141,7 +141,23 @@ export function Auth() {
 
   const handleGoogleLogin = async () => {
     try {
-      const { supabase } = await import('../../lib/supabase');
+      const { supabase, isSupabaseAvailable } = await import('../../lib/supabase');
+      
+      // Check if the Supabase server is reachable before attempting redirect
+      const available = await isSupabaseAvailable();
+      if (!available) {
+        console.warn('Supabase is unreachable, using local login');
+        setUser({
+          id: `google-${Date.now()}`,
+          authMethod: "google",
+          companyName: "Пользователь Google",
+          contactName: "Пользователь Google",
+          categories: [],
+        });
+        navigate("/");
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
