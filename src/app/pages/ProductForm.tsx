@@ -80,28 +80,32 @@ export function ProductForm() {
     }
     toast.loading("Сохранение товара...", { id: "save" });
     
-    const { addProduct, createSellerActivity } = await import('../../lib/api');
-    const newProduct = await addProduct({
-      name: title,
-      price: parseInt(price) || 0,
-      description: description,
-      category_id: category,
-      seller_id: user.id,
-      image_url: photoPreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
-      badges: ['Проверенный состав'],
-      is_active: false, // Not visible to clients until verification is complete
-    });
+    try {
+      const { addProduct, createSellerActivity } = await import('../../lib/api');
+      const newProduct = await addProduct({
+        name: title,
+        price: parseInt(price) || 0,
+        stock: parseInt(stock) || 0,
+        composition: ingredients ? [ingredients] : [],
+        description: description,
+        category_id: category,
+        seller_id: user.id,
+        image_url: photoPreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
+        badges: ['Проверенный состав'],
+        is_active: false, // Not visible to clients until verification is complete
+        rating: 0,
+        review_count: 0,
+      });
 
-    // Log activity for the seller's feed
-    await createSellerActivity(user.id, `Товар «${title}» отправлен на проверку`, 'product');
+      // Log activity for the seller's feed
+      await createSellerActivity(user.id, `Товар «${title}» отправлен на проверку`, 'product');
 
-    toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
-    
-    // Redirect to verification page so seller can see the review pipeline
-    if (newProduct?.id) {
+      toast.success("Товар сохранён и отправлен на проверку", { id: "save" });
+      
+      // Redirect to verification page so seller can see the review pipeline
       navigate(`/products/${newProduct.id}/verify`, { replace: true });
-    } else {
-      navigate(-1);
+    } catch (e: any) {
+      toast.error(`Ошибка сохранения: ${e.message}`, { id: "save" });
     }
   };
 

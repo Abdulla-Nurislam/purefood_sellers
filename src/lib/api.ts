@@ -221,6 +221,8 @@ export async function updateOrderStatus(orderId: string, status: string) {
 export async function addProduct(product: {
   name: string;
   price: number;
+  stock?: number;
+  composition?: string[];
   description?: string;
   image_url?: string;
   category_id?: string;
@@ -228,6 +230,8 @@ export async function addProduct(product: {
   tags?: string[];
   badges?: string[];
   is_active?: boolean;
+  rating?: number;
+  review_count?: number;
 }) {
   const { data, error } = await supabase
     .from('products')
@@ -237,7 +241,7 @@ export async function addProduct(product: {
 
   if (error) {
     console.error('Error adding product:', error);
-    return null;
+    throw new Error(error.message);
   }
   return data;
 }
@@ -261,7 +265,7 @@ export async function updateProduct(id: string, updates: Partial<{
 
   if (error) {
     console.error('Error updating product:', error);
-    return null;
+    throw new Error(error.message);
   }
   return data;
 }

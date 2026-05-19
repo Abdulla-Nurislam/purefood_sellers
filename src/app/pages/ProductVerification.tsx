@@ -62,11 +62,11 @@ export function ProductVerification() {
     import('../../lib/api').then(({ updateProduct }) => {
       // We just need the name; fetch directly
       import('../../lib/supabase').then(({ supabase }) => {
-        supabase.from('products').select('name, is_active, status').eq('id', id).single().then(({ data }) => {
+        supabase.from('products').select('name, is_active').eq('id', id).single().then(({ data }) => {
           if (data) {
             setProductName(data.name || 'Товар');
             // If already published
-            if (data.is_active === true || data.status === 'active') {
+            if (data.is_active === true) {
               setCurrentStep(4);
               setSliderValue(4);
               setMaxReached(4);
