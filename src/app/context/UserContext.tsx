@@ -13,6 +13,7 @@ export interface UserData {
   email?: string;
   avatarUrl?: string;
   address?: string;
+  needsCompanyName?: boolean;
 }
 
 interface UserContextType {
@@ -57,19 +58,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // If phone auth, it's 'email' because of fake email
         if (session.user.app_metadata.provider === 'google') {
           const email = session.user.email || '';
-          const name = session.user.user_metadata?.full_name || email.split('@')[0] || "Пользователь Google";
+          const name = session.user.user_metadata?.full_name || email.split('@')[0] || '';
           const avatarUrl = session.user.user_metadata?.avatar_url || '';
+
+          // Check if seller already has a company_name in DB
+          let existingCompanyName = '';
+          let needsCompanyName = true;
+          try {
+            const { data: sellerData } = await supabase
+              .from('sellers')
+              .select('company_name')
+              .eq('id', session.user.id)
+              .single();
+            if (sellerData?.company_name && sellerData.company_name.trim()) {
+              existingCompanyName = sellerData.company_name;
+              needsCompanyName = false;
+            }
+          } catch {
+            // Seller record may not exist yet
+          }
           
           setUserState((prev) => {
-            if (prev?.id === session.user.id) return prev;
+            if (prev?.id === session.user.id && prev?.companyName) return prev;
             const googleUser: UserData = {
               id: session.user.id,
               authMethod: "google",
-              companyName: name,
+              companyName: existingCompanyName || '',
               contactName: name,
               email: email,
               avatarUrl: avatarUrl,
               categories: [],
+              needsCompanyName,
             };
             saveUser(googleUser);
             return googleUser;

@@ -242,22 +242,19 @@ export async function addProduct(product: {
       .maybeSingle();
 
     if (!sellerExists) {
-      console.log('Seller profile not found in DB. Creating placeholder to satisfy foreign key...');
+      console.log('Seller profile not found in DB. Creating minimal record to satisfy foreign key...');
       const { error: sellerInsertError } = await supabase
         .from('sellers')
         .insert({
           id: product.seller_id,
-          company_name: 'Мой магазин',
-          description: 'Проверенный продавец PureFood',
-          rating: 5.0,
-          review_count: 1,
-          product_count: 1,
-          verified: true,
-          categories: ['Молочные', 'Органика'],
+          company_name: '',
+          description: '',
+          rating: 0,
+          review_count: 0,
+          product_count: 0,
+          verified: false,
+          categories: [],
           location: 'Казахстан',
-          image_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
-          badges: ['Проверенный состав'],
-          since: '2026'
         });
         
       if (sellerInsertError) {
@@ -315,6 +312,30 @@ export async function deleteProduct(id: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+// ---- Update Seller Profile ----
+
+export async function updateSellerProfile(sellerId: string, updates: {
+  company_name?: string;
+  contact_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  categories?: string[];
+}) {
+  const { data, error } = await supabase
+    .from('sellers')
+    .update(updates)
+    .eq('id', sellerId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating seller profile:', error);
+    throw new Error(error.message);
+  }
+  return data;
 }
 
 // ---- Auth ----

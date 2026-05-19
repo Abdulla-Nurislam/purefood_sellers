@@ -21,10 +21,30 @@ export function Profile() {
   const [phone, setPhone] = useState(user?.phone || "");
   const [address, setAddress] = useState(user?.address || "");
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // 1. Update local state
     updateUser({ companyName, contactName, email, phone, address });
     setEditing(false);
-    toast.success("Данные профиля сохранены");
+    
+    // 2. Sync to Supabase so buyers see updated company name
+    if (user?.id && !user.id.startsWith('local-')) {
+      try {
+        const { updateSellerProfile } = await import('../../lib/api');
+        await updateSellerProfile(user.id, {
+          company_name: companyName,
+          contact_name: contactName,
+          email,
+          phone,
+          address,
+        });
+        toast.success("Данные профиля сохранены и обновлены для покупателей");
+      } catch (err) {
+        console.error('Failed to sync profile to Supabase:', err);
+        toast.success("Данные сохранены локально. Синхронизация с сервером не удалась.");
+      }
+    } else {
+      toast.success("Данные профиля сохранены");
+    }
   };
 
   const handleCancel = () => {
@@ -50,10 +70,7 @@ export function Profile() {
     navigate("/auth");
   };
 
-  const displayName =
-    user?.authMethod === "google"
-      ? "Пользователь Google"
-      : user?.companyName || "Не указано";
+  const displayName = user?.companyName || "Не указано";
 
   const inputClass = (editable: boolean) =>
     `border-0 border-b rounded-none px-0 h-8 focus-visible:ring-0 bg-transparent font-medium ${

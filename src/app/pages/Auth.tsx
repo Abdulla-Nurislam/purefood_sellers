@@ -27,7 +27,7 @@ const CATEGORIES = [
 
 export function Auth() {
   const navigate = useNavigate();
-  const { setUser, isAuthenticated } = useUser();
+  const { user, setUser, isAuthenticated } = useUser();
 
   const [step, setStep] = useState<AuthStep>("main");
   const [phone, setPhone] = useState("");
@@ -47,8 +47,14 @@ export function Auth() {
     useRef<HTMLInputElement>(null),
   ];
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !user?.needsCompanyName) {
     return <Navigate to="/" replace />;
+  }
+
+  // If Google user needs company name, show profile form
+  if (isAuthenticated && user?.needsCompanyName && step === "main") {
+    // Auto-switch to profile form for Google users who need to enter company name
+    setTimeout(() => setStep("profile"), 0);
   }
 
   const formatPhone = (value: string) => {
@@ -108,7 +114,7 @@ export function Auth() {
               id: seller.id,
               authMethod: "phone",
               phone: seller.phone || phone,
-              companyName: seller.company_name || "Мой магазин",
+              companyName: seller.company_name || "",
               contactName: seller.contact_name || "",
               categories: seller.categories || [],
             });
@@ -125,7 +131,7 @@ export function Auth() {
           id: `seller-${Date.now()}`,
           authMethod: "phone",
           phone,
-          companyName: "Мой магазин",
+          companyName: "",
           contactName: "",
           categories: [],
         });
@@ -150,11 +156,12 @@ export function Auth() {
         setUser({
           id: `google-${Date.now()}`,
           authMethod: "google",
-          companyName: "Пользователь Google",
-          contactName: "Пользователь Google",
+          companyName: '',
+          contactName: '',
           categories: [],
+          needsCompanyName: true,
         });
-        navigate("/");
+        setStep("profile");
         return;
       }
 
@@ -171,11 +178,12 @@ export function Auth() {
       setUser({
         id: `google-${Date.now()}`,
         authMethod: "google",
-        companyName: "Пользователь Google",
-        contactName: "Пользователь Google",
+        companyName: '',
+        contactName: '',
         categories: [],
+        needsCompanyName: true,
       });
-      navigate("/");
+      setStep("profile");
     }
   };
 
@@ -185,38 +193,38 @@ export function Auth() {
     setIsLoading(true);
     
     try {
-      const { registerSeller } = await import('../../lib/api');
+      const { registerSeller, updateSellerProfile } = await import('../../lib/api');
       
-      // Check if user already has an ID (from login flow)
-      let sellerId = (user as any)?.id;
+      // Check if user already has an ID (from Google login or existing session)
+      const existingId = user?.id;
       
-      if (sellerId) {
-        // User exists in Auth but needs profile — upsert into sellers table
+      if (existingId && !existingId.startsWith('local-')) {
+        // User exists in Auth — upsert into sellers table
         try {
           const { supabase } = await import('../../lib/supabase');
           await supabase
             .from('sellers')
             .upsert({
-              id: sellerId,
-              phone,
+              id: existingId,
+              phone: phone || user?.phone || '',
               company_name: companyName,
-              contact_name: contactName,
-              categories: selectedCategories,
+              contact_name: contactName || user?.contactName || '',
+              categories: selectedCategories.length > 0 ? selectedCategories : (user?.categories || []),
             });
         } catch (e) {
           console.warn('Could not upsert seller profile:', e);
         }
         
         setUser({
-          id: sellerId,
-          authMethod: "phone",
-          phone,
+          ...user!,
+          id: existingId,
           companyName,
-          contactName,
-          categories: selectedCategories,
+          contactName: contactName || user?.contactName || '',
+          categories: selectedCategories.length > 0 ? selectedCategories : (user?.categories || []),
+          needsCompanyName: false,
         });
       } else {
-        // Fresh registration
+        // Fresh registration via phone
         const newSeller = await registerSeller({
           phone,
           company_name: companyName,
@@ -231,18 +239,20 @@ export function Auth() {
           companyName,
           contactName,
           categories: selectedCategories,
+          needsCompanyName: false,
         });
       }
     } catch (err) {
       console.error('Registration error:', err);
       // Fallback: log in locally even if Supabase failed
       setUser({
-        id: `local-${Date.now()}`,
-        authMethod: "phone",
-        phone,
+        id: user?.id || `local-${Date.now()}`,
+        authMethod: user?.authMethod || "phone",
+        phone: phone || user?.phone,
         companyName,
-        contactName,
-        categories: selectedCategories,
+        contactName: contactName || user?.contactName || '',
+        categories: selectedCategories.length > 0 ? selectedCategories : (user?.categories || []),
+        needsCompanyName: false,
       });
     }
     
