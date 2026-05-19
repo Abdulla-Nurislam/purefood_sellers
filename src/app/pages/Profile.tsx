@@ -32,10 +32,7 @@ export function Profile() {
         const { updateSellerProfile } = await import('../../lib/api');
         await updateSellerProfile(user.id, {
           company_name: companyName,
-          contact_name: contactName,
-          email,
-          phone,
-          address,
+          location: address || 'Казахстан',
         });
         toast.success("Данные профиля сохранены и обновлены для покупателей");
       } catch (err) {

@@ -318,10 +318,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
 
 export async function updateSellerProfile(sellerId: string, updates: {
   company_name?: string;
-  contact_name?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
+  location?: string;
   categories?: string[];
 }) {
   const { data, error } = await supabase
