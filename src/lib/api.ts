@@ -323,8 +323,7 @@ export async function updateSellerProfile(sellerId: string, updates: {
 }) {
   const { data, error } = await supabase
     .from('sellers')
-    .update(updates)
-    .eq('id', sellerId)
+    .upsert({ id: sellerId, ...updates })
     .select()
     .single();
 
@@ -419,9 +418,7 @@ export async function registerSeller(seller: {
     .from('sellers')
     .insert({
       id: userId,
-      phone: seller.phone,
       company_name: seller.company_name,
-      contact_name: seller.contact_name,
       categories: seller.categories
     })
     .select()

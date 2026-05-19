@@ -206,9 +206,7 @@ export function Auth() {
             .from('sellers')
             .upsert({
               id: existingId,
-              phone: phone || user?.phone || '',
               company_name: companyName,
-              contact_name: contactName || user?.contactName || '',
               categories: selectedCategories.length > 0 ? selectedCategories : (user?.categories || []),
             });
         } catch (e) {
