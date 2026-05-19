@@ -4,6 +4,7 @@ import { ArrowLeft, ImagePlus, UploadCloud, Info, X } from "lucide-react";
 import { Card, CardContent, Button, Input, Label, Textarea, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
+import { addProduct, createSellerActivity } from "../../lib/api";
 
 // Format number with thousand separators (1500 -> "1 500")
 function formatNumber(val: string): string {
@@ -81,7 +82,6 @@ export function ProductForm() {
     toast.loading("Сохранение товара...", { id: "save" });
     
     try {
-      const { addProduct, createSellerActivity } = await import('../../lib/api');
       const newProduct = await addProduct({
         name: title,
         price: parseInt(price) || 0,

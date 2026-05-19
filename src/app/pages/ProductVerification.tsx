@@ -4,6 +4,8 @@ import { ArrowLeft, ShieldCheck, FileSearch, FlaskConical, CheckCircle2, Package
 import { Button, Card, CardContent, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
+import { updateProduct, createSellerActivity } from "../../lib/api";
+import { supabase } from "../../lib/supabase";
 
 const VERIFICATION_STEPS = [
   {
@@ -59,22 +61,18 @@ export function ProductVerification() {
   // Load product info
   useEffect(() => {
     if (!id) return;
-    import('../../lib/api').then(({ updateProduct }) => {
-      // We just need the name; fetch directly
-      import('../../lib/supabase').then(({ supabase }) => {
-        supabase.from('products').select('name, is_active').eq('id', id).single().then(({ data }) => {
-          if (data) {
-            setProductName(data.name || 'Товар');
-            // If already published
-            if (data.is_active === true) {
-              setCurrentStep(4);
-              setSliderValue(4);
-              setMaxReached(4);
-              setIsPublished(true);
-            }
-          }
-        });
-      });
+    
+    supabase.from('products').select('name, is_active').eq('id', id).single().then(({ data }) => {
+      if (data) {
+        setProductName(data.name || 'Товар');
+        // If already published
+        if (data.is_active === true) {
+          setCurrentStep(4);
+          setSliderValue(4);
+          setMaxReached(4);
+          setIsPublished(true);
+        }
+      }
     });
   }, [id]);
 
@@ -90,10 +88,8 @@ export function ProductVerification() {
 
         // Log activity for each step
         if (user?.id && id) {
-          import('../../lib/api').then(({ createSellerActivity }) => {
-            const step = VERIFICATION_STEPS[sliderValue];
-            createSellerActivity(user.id, `${step.title}: «${productName}»`, 'product');
-          });
+          const step = VERIFICATION_STEPS[sliderValue];
+          createSellerActivity(user.id, `${step.title}: «${productName}»`, 'product');
         }
       }, 800);
       return () => clearTimeout(timer);
@@ -116,7 +112,6 @@ export function ProductVerification() {
     setIsPublishing(true);
 
     try {
-      const { updateProduct, createSellerActivity } = await import('../../lib/api');
       await updateProduct(id, { is_active: true });
       await createSellerActivity(user.id, `Товар «${productName}» опубликован и доступен клиентам`, 'product');
 
