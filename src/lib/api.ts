@@ -249,6 +249,7 @@ export async function addProduct(product: {
 export async function updateProduct(id: string, updates: Partial<{
   name: string;
   price: number;
+  stock: number;
   description: string;
   image_url: string;
   category_id: string;
