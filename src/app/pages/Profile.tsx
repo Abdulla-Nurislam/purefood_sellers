@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, Button, Input, Label, Badge } from "../components/ui";
 import {
@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
+import { fetchRetentionAnalytics, type RetentionDataPoint } from "../../lib/api";
 
 export function Profile() {
   const navigate = useNavigate();
@@ -20,6 +21,19 @@ export function Profile() {
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [address, setAddress] = useState(user?.address || "");
+
+  // Реальная аналитика из Supabase — загружается при открытии профиля
+  const [analyticsData, setAnalyticsData] = useState<RetentionDataPoint[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setAnalyticsLoading(true);
+    fetchRetentionAnalytics(user.id)
+      .then(data => setAnalyticsData(data))
+      .catch(err => console.error('Failed to load retention analytics:', err))
+      .finally(() => setAnalyticsLoading(false));
+  }, [user?.id]);
 
   const handleSave = async () => {
     // 1. Update local state
@@ -174,61 +188,75 @@ export function Profile() {
           </div>
           <Card className="border-gray-100 shadow-sm">
             <CardContent className="p-5 space-y-4">
-              {(() => {
-                const retentionData = [
-                  { month: "Дек", views: 124, repeats: 18, conversion: 14.5 },
-                  { month: "Янв", views: 156, repeats: 27, conversion: 17.3 },
-                  { month: "Фев", views: 189, repeats: 34, conversion: 18.0 },
-                  { month: "Мар", views: 210, repeats: 45, conversion: 21.4 },
-                  { month: "Апр", views: 243, repeats: 58, conversion: 23.9 },
-                  { month: "Май", views: 278, repeats: 72, conversion: 25.9 },
-                ];
-
-                const maxViews = Math.max(...retentionData.map(d => d.views));
+              {analyticsLoading ? (
+                /* Скелетон пока данные загружаются */
+                <div className="space-y-3 animate-pulse">
+                  <div className="grid grid-cols-3 gap-3">
+                    {[0,1,2].map(i => (
+                      <div key={i} className="bg-gray-100 rounded-xl h-16" />
+                    ))}
+                  </div>
+                  <div className="bg-gray-100 rounded-xl h-28" />
+                </div>
+              ) : analyticsData.length === 0 || analyticsData.every(d => d.views === 0 && d.repeats === 0) ? (
+                /* Пустое состояние — данных ещё нет */
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+                  <BarChart3 className="w-8 h-8 text-gray-300" />
+                  <p className="text-sm text-gray-500">Данных пока нет</p>
+                  <p className="text-xs text-gray-400">Аналитика появится когда покупатели начнут просматривать ваши товары</p>
+                </div>
+              ) : (() => {
+                /* Реальный график из данных Supabase */
+                const maxViews = Math.max(...analyticsData.map(d => d.views), 1);
                 const chartW = 300;
                 const chartH = 120;
                 const padL = 0;
                 const padB = 20;
                 const plotW = chartW - padL;
                 const plotH = chartH - padB;
+                const xStep = analyticsData.length > 1 ? plotW / (analyticsData.length - 1) : plotW;
 
-                const xStep = plotW / (retentionData.length - 1);
-
-                const viewPoints = retentionData.map((d, i) => ({
+                const viewPoints = analyticsData.map((d, i) => ({
                   x: padL + i * xStep,
                   y: plotH - (d.views / maxViews) * plotH,
                 }));
-                const repeatPoints = retentionData.map((d, i) => ({
+                const repeatPoints = analyticsData.map((d, i) => ({
                   x: padL + i * xStep,
                   y: plotH - (d.repeats / maxViews) * plotH,
                 }));
 
                 const viewLine = viewPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
                 const repeatLine = repeatPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-
                 const viewArea = `${viewLine} L${viewPoints[viewPoints.length - 1].x},${plotH} L${viewPoints[0].x},${plotH} Z`;
                 const repeatArea = `${repeatLine} L${repeatPoints[repeatPoints.length - 1].x},${plotH} L${repeatPoints[0].x},${plotH} Z`;
 
-                const lastData = retentionData[retentionData.length - 1];
-                const prevData = retentionData[retentionData.length - 2];
-                const viewsGrowth = Math.round(((lastData.views - prevData.views) / prevData.views) * 100);
-                const repeatsGrowth = Math.round(((lastData.repeats - prevData.repeats) / prevData.repeats) * 100);
+                const lastData = analyticsData[analyticsData.length - 1];
+                const prevData = analyticsData[analyticsData.length - 2] || lastData;
+                const totalViews = analyticsData.reduce((s, d) => s + d.views, 0);
+                const totalRepeats = analyticsData.reduce((s, d) => s + d.repeats, 0);
+                const conversion = totalViews > 0 ? ((totalRepeats / totalViews) * 100).toFixed(1) : '0.0';
+                const viewsGrowth = prevData.views > 0
+                  ? Math.round(((lastData.views - prevData.views) / prevData.views) * 100)
+                  : lastData.views > 0 ? 100 : 0;
+                const repeatsGrowth = prevData.repeats > 0
+                  ? Math.round(((lastData.repeats - prevData.repeats) / prevData.repeats) * 100)
+                  : lastData.repeats > 0 ? 100 : 0;
 
                 return (
                   <>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                        <p className="text-lg font-bold text-emerald-700">{lastData.views}</p>
+                        <p className="text-lg font-bold text-emerald-700">{totalViews}</p>
                         <p className="text-[10px] text-emerald-600 font-medium">Просмотры</p>
-                        <p className="text-[10px] text-emerald-500">+{viewsGrowth}%</p>
+                        <p className="text-[10px] text-emerald-500">{viewsGrowth >= 0 ? '+' : ''}{viewsGrowth}% за мес</p>
                       </div>
                       <div className="bg-amber-50 rounded-xl p-3 text-center">
-                        <p className="text-lg font-bold text-amber-700">{lastData.repeats}</p>
-                        <p className="text-[10px] text-amber-600 font-medium">Повторные</p>
-                        <p className="text-[10px] text-amber-500">+{repeatsGrowth}%</p>
+                        <p className="text-lg font-bold text-amber-700">{totalRepeats}</p>
+                        <p className="text-[10px] text-amber-600 font-medium">Заказы</p>
+                        <p className="text-[10px] text-amber-500">{repeatsGrowth >= 0 ? '+' : ''}{repeatsGrowth}% за мес</p>
                       </div>
                       <div className="bg-blue-50 rounded-xl p-3 text-center">
-                        <p className="text-lg font-bold text-blue-700">{lastData.conversion}%</p>
+                        <p className="text-lg font-bold text-blue-700">{conversion}%</p>
                         <p className="text-[10px] text-blue-600 font-medium">Конверсия</p>
                         <p className="text-[10px] text-blue-500">удержания</p>
                       </div>
@@ -250,19 +278,14 @@ export function Profile() {
                         {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
                           <line
                             key={frac}
-                            x1={padL}
-                            y1={plotH - frac * plotH}
-                            x2={chartW}
-                            y2={plotH - frac * plotH}
-                            stroke="#e5e7eb"
-                            strokeWidth="0.5"
-                            strokeDasharray="3,3"
+                            x1={padL} y1={plotH - frac * plotH}
+                            x2={chartW} y2={plotH - frac * plotH}
+                            stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3,3"
                           />
                         ))}
 
                         <path d={viewArea} fill="url(#viewGrad)" />
                         <path d={repeatArea} fill="url(#repeatGrad)" />
-
                         <path d={viewLine} fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         <path d={repeatLine} fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
@@ -273,7 +296,7 @@ export function Profile() {
                           <circle key={`r${i}`} cx={p.x} cy={p.y} r={i === repeatPoints.length - 1 ? 4 : 2.5} fill="#d97706" stroke="white" strokeWidth="1.5" />
                         ))}
 
-                        {retentionData.map((d, i) => (
+                        {analyticsData.map((d, i) => (
                           <text key={`label${i}`} x={padL + i * xStep} y={chartH - 2} textAnchor="middle" className="text-[9px] fill-gray-400">
                             {d.month}
                           </text>
@@ -288,7 +311,7 @@ export function Profile() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                        <span className="text-[10px] text-gray-500 font-medium">Повторные покупки</span>
+                        <span className="text-[10px] text-gray-500 font-medium">Заказы</span>
                       </div>
                     </div>
                   </>
@@ -299,6 +322,7 @@ export function Profile() {
         </div>
 
         {/* Company data */}
+
         <div className="space-y-2">
           <h3 className="font-semibold text-gray-900 px-1 text-sm">Данные компании</h3>
           <Card className="border-gray-100 shadow-sm">

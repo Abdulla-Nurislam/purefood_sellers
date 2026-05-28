@@ -431,3 +431,73 @@ export async function registerSeller(seller: {
 
   return userData;
 }
+
+// ---- Теги из БД ----
+
+// Загружает список доступных тегов из таблицы product_tags
+export async function fetchProductTags(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('product_tags')
+    .select('name')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching product tags:', error);
+    // Возвращаем базовый набор если запрос не удался
+    return ['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт'];
+  }
+
+  return (data || []).map(t => t.name);
+}
+
+// ---- Аналитика удержания из БД ----
+
+export interface RetentionDataPoint {
+  month: string;   // Название месяца (напр., "Янв")
+  views: number;   // Количество просмотров товаров
+  repeats: number; // Количество заказов (повторных покупок)
+}
+
+// Считает просмотры и заказы по месяцам за последние 6 месяцев
+export async function fetchRetentionAnalytics(sellerId: string): Promise<RetentionDataPoint[]> {
+  const now = new Date();
+  // Генерируем массив из 6 прошлых месяцев (включая текущий)
+  const months: Array<{ label: string; start: string; end: string }> = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    const label = d.toLocaleString('ru-RU', { month: 'short' });
+    months.push({ label: label.charAt(0).toUpperCase() + label.slice(1, 3), start, end });
+  }
+
+  const sixMonthsAgo = months[0].start;
+
+  // Загружаем все просмотры и все заказы за весь период одним запросом
+  const [viewsRes, ordersRes] = await Promise.all([
+    supabase
+      .from('product_views')
+      .select('viewed_at')
+      .eq('seller_id', sellerId)
+      .gte('viewed_at', sixMonthsAgo),
+    supabase
+      .from('orders')
+      .select('created_at')
+      .eq('seller_id', sellerId)
+      .gte('created_at', sixMonthsAgo),
+  ]);
+
+  if (viewsRes.error) console.error('Error fetching views for analytics:', viewsRes.error);
+  if (ordersRes.error) console.error('Error fetching orders for analytics:', ordersRes.error);
+
+  const views = viewsRes.data || [];
+  const orders = ordersRes.data || [];
+
+  // Группируем по месяцам
+  return months.map(({ label, start, end }) => ({
+    month: label,
+    views: views.filter(v => v.viewed_at >= start && v.viewed_at <= end).length,
+    repeats: orders.filter(o => o.created_at >= start && o.created_at <= end).length,
+  }));
+}

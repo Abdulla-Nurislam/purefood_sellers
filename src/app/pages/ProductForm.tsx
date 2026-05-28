@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, ImagePlus, UploadCloud, Info, X, Tag } from "lucide-react";
 import { Card, CardContent, Button, Input, Label, Textarea, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
-import { addProduct, createSellerActivity } from "../../lib/api";
+import { addProduct, createSellerActivity, fetchProductTags } from "../../lib/api";
 
 // Format number with thousand separators (1500 -> "1 500")
 function formatNumber(val: string): string {
@@ -32,12 +32,16 @@ export function ProductForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  // Список тегов-подсказок загружается из таблицы product_tags в Supabase
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(true);
 
-  const tagSuggestions = [
-    "Эко", "Натуральное", "Без сахара", "Местный продукт",
-    "Без ГМО", "Органик", "Халяль", "Фермерское",
-    "Без лактозы", "Веган",
-  ];
+  useEffect(() => {
+    fetchProductTags()
+      .then(loaded => setTagSuggestions(loaded))
+      .catch(() => setTagSuggestions(['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт']))
+      .finally(() => setTagsLoading(false));
+  }, []);
 
   const toggleTag = (tag: string) => {
     setTags(prev =>
@@ -277,25 +281,29 @@ export function ProductForm() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                {tagSuggestions.map(tag => {
-                  const isSelected = tags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`h-9 rounded-xl text-xs font-medium border transition-all active:scale-[0.97] ${
-                        isSelected
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
-                          : "bg-gray-50 text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
-                      }`}
-                    >
-                      {isSelected ? "✓ " : "+ "}{tag}
-                    </button>
-                  );
-                })}
-              </div>
+              {tagsLoading ? (
+                <p className="text-xs text-gray-400 text-center py-2">Загрузка тегов...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {tagSuggestions.map(tag => {
+                    const isSelected = tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`h-9 rounded-xl text-xs font-medium border transition-all active:scale-[0.97] ${
+                          isSelected
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
+                            : "bg-gray-50 text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                        }`}
+                      >
+                        {isSelected ? "✓ " : "+ "}{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <p className="text-[10px] text-gray-500">Выберите подходящие теги для вашего товара. Они помогут покупателям найти его быстрее.</p>
             </div>
           </CardContent>
