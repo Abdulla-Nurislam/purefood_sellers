@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { Card, CardContent, Button, Input, Label, Badge } from "../components/ui";
 import {
   ShieldCheck, Building, MapPin, Mail, Phone, UploadCloud, LogOut, Award,
-  User, Pencil, Check, X
+  User, Pencil, Check, X, BarChart3
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
@@ -162,6 +162,141 @@ export function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Retention analytics */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-emerald-600" />
+              Аналитика удержания
+            </h3>
+            <Badge variant="outline" className="text-[10px] border-gray-200 bg-white">6 месяцев</Badge>
+          </div>
+          <Card className="border-gray-100 shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              {(() => {
+                const retentionData = [
+                  { month: "Дек", views: 124, repeats: 18, conversion: 14.5 },
+                  { month: "Янв", views: 156, repeats: 27, conversion: 17.3 },
+                  { month: "Фев", views: 189, repeats: 34, conversion: 18.0 },
+                  { month: "Мар", views: 210, repeats: 45, conversion: 21.4 },
+                  { month: "Апр", views: 243, repeats: 58, conversion: 23.9 },
+                  { month: "Май", views: 278, repeats: 72, conversion: 25.9 },
+                ];
+
+                const maxViews = Math.max(...retentionData.map(d => d.views));
+                const chartW = 300;
+                const chartH = 120;
+                const padL = 0;
+                const padB = 20;
+                const plotW = chartW - padL;
+                const plotH = chartH - padB;
+
+                const xStep = plotW / (retentionData.length - 1);
+
+                const viewPoints = retentionData.map((d, i) => ({
+                  x: padL + i * xStep,
+                  y: plotH - (d.views / maxViews) * plotH,
+                }));
+                const repeatPoints = retentionData.map((d, i) => ({
+                  x: padL + i * xStep,
+                  y: plotH - (d.repeats / maxViews) * plotH,
+                }));
+
+                const viewLine = viewPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                const repeatLine = repeatPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+
+                const viewArea = `${viewLine} L${viewPoints[viewPoints.length - 1].x},${plotH} L${viewPoints[0].x},${plotH} Z`;
+                const repeatArea = `${repeatLine} L${repeatPoints[repeatPoints.length - 1].x},${plotH} L${repeatPoints[0].x},${plotH} Z`;
+
+                const lastData = retentionData[retentionData.length - 1];
+                const prevData = retentionData[retentionData.length - 2];
+                const viewsGrowth = Math.round(((lastData.views - prevData.views) / prevData.views) * 100);
+                const repeatsGrowth = Math.round(((lastData.repeats - prevData.repeats) / prevData.repeats) * 100);
+
+                return (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-lg font-bold text-emerald-700">{lastData.views}</p>
+                        <p className="text-[10px] text-emerald-600 font-medium">Просмотры</p>
+                        <p className="text-[10px] text-emerald-500">+{viewsGrowth}%</p>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-3 text-center">
+                        <p className="text-lg font-bold text-amber-700">{lastData.repeats}</p>
+                        <p className="text-[10px] text-amber-600 font-medium">Повторные</p>
+                        <p className="text-[10px] text-amber-500">+{repeatsGrowth}%</p>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-3 text-center">
+                        <p className="text-lg font-bold text-blue-700">{lastData.conversion}%</p>
+                        <p className="text-[10px] text-blue-600 font-medium">Конверсия</p>
+                        <p className="text-[10px] text-blue-500">удержания</p>
+                      </div>
+                    </div>
+
+                    <div className="w-full overflow-hidden">
+                      <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                          <linearGradient id="viewGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#059669" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#059669" stopOpacity="0.02" />
+                          </linearGradient>
+                          <linearGradient id="repeatGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#d97706" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#d97706" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+
+                        {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+                          <line
+                            key={frac}
+                            x1={padL}
+                            y1={plotH - frac * plotH}
+                            x2={chartW}
+                            y2={plotH - frac * plotH}
+                            stroke="#e5e7eb"
+                            strokeWidth="0.5"
+                            strokeDasharray="3,3"
+                          />
+                        ))}
+
+                        <path d={viewArea} fill="url(#viewGrad)" />
+                        <path d={repeatArea} fill="url(#repeatGrad)" />
+
+                        <path d={viewLine} fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={repeatLine} fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+                        {viewPoints.map((p, i) => (
+                          <circle key={`v${i}`} cx={p.x} cy={p.y} r={i === viewPoints.length - 1 ? 4 : 2.5} fill="#059669" stroke="white" strokeWidth="1.5" />
+                        ))}
+                        {repeatPoints.map((p, i) => (
+                          <circle key={`r${i}`} cx={p.x} cy={p.y} r={i === repeatPoints.length - 1 ? 4 : 2.5} fill="#d97706" stroke="white" strokeWidth="1.5" />
+                        ))}
+
+                        {retentionData.map((d, i) => (
+                          <text key={`label${i}`} x={padL + i * xStep} y={chartH - 2} textAnchor="middle" className="text-[9px] fill-gray-400">
+                            {d.month}
+                          </text>
+                        ))}
+                      </svg>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-6">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className="text-[10px] text-gray-500 font-medium">Просмотры</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="text-[10px] text-gray-500 font-medium">Повторные покупки</span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Company data */}
         <div className="space-y-2">

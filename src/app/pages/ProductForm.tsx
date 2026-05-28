@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, ImagePlus, UploadCloud, Info, X } from "lucide-react";
+import { ArrowLeft, ImagePlus, UploadCloud, Info, X, Tag } from "lucide-react";
 import { Card, CardContent, Button, Input, Label, Textarea, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
@@ -31,6 +31,19 @@ export function ProductForm() {
   const [ingredients, setIngredients] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+
+  const tagSuggestions = [
+    "Эко", "Натуральное", "Без сахара", "Местный продукт",
+    "Без ГМО", "Органик", "Халяль", "Фермерское",
+    "Без лактозы", "Веган",
+  ];
+
+  const toggleTag = (tag: string) => {
+    setTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
 
   const handleUploadCOA = () => {
     toast.loading("Загрузка сертификата...", { id: "coa" });
@@ -91,7 +104,7 @@ export function ProductForm() {
         category_id: category,
         seller_id: user.id,
         image_url: photoPreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
-        badges: ['Проверенный состав'],
+        badges: tags.length > 0 ? tags : ['Проверенный состав'],
         is_active: false, // Not visible to clients until verification is complete
         rating: 0,
         review_count: 0,
@@ -236,6 +249,54 @@ export function ProductForm() {
               </Label>
               <Textarea id="ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="100% органические ингредиенты..." className="bg-gray-50/50 border-gray-200 h-20" />
               <p className="text-[10px] text-gray-500">Платформа PureFood требует полного раскрытия состава.</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-gray-700 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-gray-400" />
+                Теги продукта
+              </Label>
+
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="w-3.5 h-3.5 rounded-full bg-emerald-200 hover:bg-emerald-300 flex items-center justify-center transition-colors"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                {tagSuggestions.map(tag => {
+                  const isSelected = tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`h-9 rounded-xl text-xs font-medium border transition-all active:scale-[0.97] ${
+                        isSelected
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
+                      }`}
+                    >
+                      {isSelected ? "✓ " : "+ "}{tag}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-gray-500">Выберите подходящие теги для вашего товара. Они помогут покупателям найти его быстрее.</p>
             </div>
           </CardContent>
         </Card>
