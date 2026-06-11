@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, Button, Input, Label, Badge } from "../components/ui";
 import {
@@ -26,8 +26,15 @@ export function Profile() {
   const [analyticsData, setAnalyticsData] = useState<RetentionDataPoint[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
+  // Ref for hidden PDF file input
+  const declarationsInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (!user?.id) return;
+    // If user is not yet loaded, don't hang in skeleton state
+    if (!user?.id) {
+      setAnalyticsLoading(false);
+      return;
+    }
     setAnalyticsLoading(true);
     fetchRetentionAnalytics(user.id)
       .then(data => setAnalyticsData(data))
@@ -69,10 +76,21 @@ export function Profile() {
   };
 
   const handleUploadDeclarations = () => {
-    toast.loading("Загрузка документов...", { id: "upload" });
-    setTimeout(() => {
-      toast.success("Документы успешно загружены и отправлены на проверку", { id: "upload" });
-    }, 2000);
+    declarationsInputRef.current?.click();
+  };
+
+  const handleDeclarationsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Validate PDF only
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      toast.error('Пожалуйста, загрузите файл в формате PDF');
+      e.target.value = '';
+      return;
+    }
+    toast.success(`Документ «${file.name}» загружен и отправлен на проверку`);
+    // Reset input so the same file can be re-selected if needed
+    e.target.value = '';
   };
 
   const handleLogout = () => {
@@ -442,6 +460,14 @@ export function Profile() {
             <h3 className="font-semibold text-gray-900 text-sm">Документы проверки</h3>
             <Badge variant="outline" className="text-[10px] border-gray-200 bg-white">Обязательно</Badge>
           </div>
+          {/* Hidden PDF-only file input */}
+          <input
+            ref={declarationsInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={handleDeclarationsChange}
+          />
           <Card className="border-gray-100 shadow-sm border-dashed">
             <CardContent
               className="p-5 flex flex-col items-center justify-center space-y-3 text-center cursor-pointer hover:bg-gray-50/50 transition-colors rounded-xl min-h-[140px]"

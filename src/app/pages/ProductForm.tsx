@@ -24,7 +24,7 @@ export function ProductForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("dairy");
+  const [category, setCategory] = useState("fruits_vegetables");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [description, setDescription] = useState("");
@@ -38,7 +38,14 @@ export function ProductForm() {
 
   useEffect(() => {
     fetchProductTags()
-      .then(loaded => setTagSuggestions(loaded))
+      .then(loaded => {
+        // If table is empty or missing — use fallback tags
+        if (loaded.length === 0) {
+          setTagSuggestions(['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт']);
+        } else {
+          setTagSuggestions(loaded);
+        }
+      })
       .catch(() => setTagSuggestions(['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт']))
       .finally(() => setTagsLoading(false));
   }, []);
@@ -201,12 +208,14 @@ export function ProductForm() {
             <div className="space-y-2">
               <Label htmlFor="category" className="text-gray-700">Категория</Label>
               <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex h-10 w-full rounded-md border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
-                <option value="dairy">Молочные</option>
-                <option value="honey">Мёд</option>
-                <option value="bread">Хлеб</option>
-                <option value="fruits">Фрукты</option>
-                <option value="nuts">Орехи</option>
-                <option value="tea">Чай</option>
+                <option value="fruits_vegetables">Фрукты и овощи</option>
+                <option value="farm_meat">Фермерское мясо и птица</option>
+                <option value="organic">Органика</option>
+                <option value="no_sugar">Без сахара</option>
+                <option value="no_gluten">Без глютена</option>
+                <option value="no_lactose">Без лактозы</option>
+                <option value="superfoods">Суперфуды</option>
+                <option value="snacks">Здоровые перекусы</option>
               </select>
             </div>
 

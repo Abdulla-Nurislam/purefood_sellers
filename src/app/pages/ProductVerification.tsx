@@ -112,7 +112,37 @@ export function ProductVerification() {
     setIsPublishing(true);
 
     try {
-      await updateProduct(id, { is_active: true });
+      // Fetch product composition to determine which badges to assign
+      const { data: productData } = await supabase
+        .from('products')
+        .select('composition, badges, tags')
+        .eq('id', id)
+        .single();
+
+      // Dynamically assign badges based on composition analysis
+      const existingBadges: string[] = productData?.badges || [];
+      const composition: string[] = productData?.composition || [];
+      const tags: string[] = productData?.tags || [];
+      const compositionText = composition.join(' ').toLowerCase();
+
+      const newBadges = new Set<string>(existingBadges);
+
+      // Always assign verification badge
+      newBadges.add('Проверенный состав');
+
+      // 'Без Е-добавок' — no E-codes or additive keywords in composition
+      const eAdditivePattern = /\bе\d{3,4}\b|консервант|усилитель вкуса|загуститель|стабилизатор|эмульгатор|краситель/i;
+      if (!eAdditivePattern.test(compositionText)) {
+        newBadges.add('Без Е-добавок');
+      }
+
+      // '100% Натурально' — composition contains natural/organic keywords or tag already present
+      const naturalPattern = /натур|органич|эко|100\s*%|без добавок|без консервантов/i;
+      if (naturalPattern.test(compositionText) || tags.some(t => /органик|эко|натур/i.test(t))) {
+        newBadges.add('100% Натурально');
+      }
+
+      await updateProduct(id, { is_active: true, badges: Array.from(newBadges) });
       await createSellerActivity(user.id, `Товар «${productName}» опубликован и доступен клиентам`, 'product');
 
       setIsPublished(true);
