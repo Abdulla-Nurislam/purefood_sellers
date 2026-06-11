@@ -7,6 +7,7 @@ import {
 import { Button, Input, Badge } from "../components/ui";
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
+import { deleteProduct } from "../../lib/api";
 
 interface Product {
   id: string;
@@ -50,10 +51,16 @@ export function Products() {
     return matchSearch && matchCat;
   });
 
-  const handleDelete = (product: Product) => {
-    setProducts((prev) => prev.filter((p) => p.id !== product.id));
-    setDeleteConfirm(null);
-    toast.success(`Товар «${product.name}» удалён`);
+  const handleDelete = async (product: Product) => {
+    toast.loading(`Удаление «${product.name}»...`, { id: "delete" });
+    const success = await deleteProduct(product.id);
+    if (success) {
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setDeleteConfirm(null);
+      toast.success(`Товар «${product.name}» удалён`, { id: "delete" });
+    } else {
+      toast.error(`Не удалось удалить товар «${product.name}»`, { id: "delete" });
+    }
   };
 
   const getStatusBadge = (status: string) => {
