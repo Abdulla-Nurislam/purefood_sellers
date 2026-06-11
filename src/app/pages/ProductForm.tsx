@@ -123,13 +123,27 @@ export function ProductForm() {
     toast.loading("Сохранение товара...", { id: "save" });
     
     try {
+      // Маппинг новых категорий интерфейса в старые ID категорий, которые реально существуют в таблице categories базы данных Supabase.
+      // Это нужно чтобы избежать ошибки: violates foreign key constraint "products_category_id_fkey"
+      const categoryMapping: Record<string, string> = {
+        'fruits_vegetables': 'fruits',
+        'farm_meat': 'meat',
+        'organic': 'vegetables', 
+        'no_sugar': 'honey', 
+        'no_gluten': 'bread',
+        'no_lactose': 'dairy',
+        'superfoods': 'nuts',
+        'snacks': 'tea'
+      };
+      const dbCategory = categoryMapping[category] || category;
+
       const newProduct = await addProduct({
         name: title,
         price: parseInt(price) || 0,
         stock: parseInt(stock) || 0,
         composition: ingredients ? [ingredients] : [],
         description: description,
-        category_id: category,
+        category_id: dbCategory,
         seller_id: user.id,
         image_url: photoPreview || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080',
         badges: tags.length > 0 ? tags : ['Проверенный состав'],

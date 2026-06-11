@@ -54,12 +54,15 @@ export function Products() {
     // Show a loading toast
     const toastId = toast.loading(`Удаление товара «${product.name}»...`);
     try {
-      const { deleteProduct } = await import('../../lib/api');
+      const { deleteProduct, createSellerActivity } = await import('../../lib/api');
       const success = await deleteProduct(product.id);
       
       if (success) {
         setProducts((prev) => prev.filter((p) => p.id !== product.id));
         setDeleteConfirm(null);
+        if (user?.id) {
+          await createSellerActivity(user.id, `Товар «${product.name}» удалён`, 'product');
+        }
         toast.success(`Товар «${product.name}» удалён`, { id: toastId });
       } else {
         toast.error('Не удалось удалить товар. Попробуйте еще раз.', { id: toastId });
