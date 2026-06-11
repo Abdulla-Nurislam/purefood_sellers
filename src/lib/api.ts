@@ -436,19 +436,37 @@ export async function registerSeller(seller: {
 
 // Загружает список доступных тегов из таблицы product_tags
 export async function fetchProductTags(): Promise<string[]> {
+  const FALLBACK = ['\u042d\u043a\u043e', '\u041d\u0430\u0442\u0443\u0440\u0430\u043b\u044c\u043d\u043e\u0435', '\u0411\u0435\u0437 \u0441\u0430\u0445\u0430\u0440\u0430', '\u0411\u0435\u0437 \u0413\u041c\u041e', '\u041e\u0440\u0433\u0430\u043d\u0438\u043a', '\u0425\u0430\u043b\u044f\u043b\u044c', '\u0424\u0435\u0440\u043c\u0435\u0440\u0441\u043a\u043e\u0435', '\u0411\u0435\u0437 \u043b\u0430\u043a\u0442\u043e\u0437\u044b', '\u0412\u0435\u0433\u0430\u043d', '\u041c\u0435\u0441\u0442\u043d\u044b\u0439 \u043f\u0440\u043e\u0434\u0443\u043a\u0442'];
+
+  // Try with is_active filter first
   const { data, error } = await supabase
     .from('product_tags')
     .select('name')
     .eq('is_active', true)
     .order('name');
 
-  if (error) {
-    console.error('Error fetching product tags:', error);
-    // Возвращаем базовый набор если запрос не удался
-    return ['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт'];
+  if (!error && data && data.length > 0) {
+    return data.map(t => t.name);
   }
 
-  return (data || []).map(t => t.name);
+  // If is_active column missing or table is empty, try without filter
+  if (error?.code === '42703' || (error?.message && error.message.includes('is_active'))) {
+    const { data: allData, error: allError } = await supabase
+      .from('product_tags')
+      .select('name')
+      .order('name');
+
+    if (!allError && allData && allData.length > 0) {
+      return allData.map(t => t.name);
+    }
+  }
+
+  if (error) {
+    console.error('Error fetching product tags:', error);
+  }
+
+  // Return fallback set if table is unavailable or empty
+  return FALLBACK;
 }
 
 // ---- Аналитика удержания из БД ----

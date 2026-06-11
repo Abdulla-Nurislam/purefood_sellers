@@ -37,17 +37,34 @@ export function ProductForm() {
   const [tagsLoading, setTagsLoading] = useState(true);
 
   useEffect(() => {
+    const FALLBACK_TAGS = ['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт'];
+
+    // Race the Supabase call against a 5-second timeout so the spinner never hangs
+    const timeoutId = setTimeout(() => {
+      setTagSuggestions(prev => prev.length === 0 ? FALLBACK_TAGS : prev);
+      setTagsLoading(false);
+    }, 5000);
+
     fetchProductTags()
       .then(loaded => {
+        clearTimeout(timeoutId);
         // If table is empty or missing — use fallback tags
         if (loaded.length === 0) {
-          setTagSuggestions(['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт']);
+          setTagSuggestions(FALLBACK_TAGS);
         } else {
           setTagSuggestions(loaded);
         }
       })
-      .catch(() => setTagSuggestions(['Эко', 'Натуральное', 'Без сахара', 'Без ГМО', 'Органик', 'Халяль', 'Фермерское', 'Без лактозы', 'Веган', 'Местный продукт']))
-      .finally(() => setTagsLoading(false));
+      .catch(() => {
+        clearTimeout(timeoutId);
+        setTagSuggestions(FALLBACK_TAGS);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setTagsLoading(false);
+      });
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const toggleTag = (tag: string) => {
