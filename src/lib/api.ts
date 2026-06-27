@@ -519,3 +519,191 @@ export async function fetchRetentionAnalytics(sellerId: string): Promise<Retenti
     repeats: orders.filter(o => o.created_at >= start && o.created_at <= end).length,
   }));
 }
+
+// ============================================================
+// Reviews API (Seller side)
+// ============================================================
+
+export interface SellerReview {
+  id: string;
+  user_id: string | null;
+  seller_id: string;
+  order_id: string | null;
+  product_id: string;
+  rating: number;
+  text_comment: string | null;
+  tags: string[];
+  images: string[];
+  seller_reply: string | null;
+  seller_reply_at: string | null;
+  is_flagged: boolean;
+  created_at: string;
+  userName?: string;
+  productName?: string;
+}
+
+export interface ReviewAnalyticsDashboard {
+  averageRating: number;
+  reviewCount: number;
+  ratingTrend: { label: string; avg: number; count: number }[];
+  topPositiveTags: { tag: string; count: number }[];
+  topNegativeTags: { tag: string; count: number }[];
+}
+
+export async function fetchSellerReviews(
+  sellerId: string,
+  filters?: {
+    rating?: number;          // filter by exact star count
+    hasPhoto?: boolean;       // only reviews with images
+    sortBy?: 'newest' | 'oldest' | 'lowest' | 'highest';
+  }
+): Promise<SellerReview[]> {
+  let query = supabase
+    .from('reviews')
+    .select('*, users(name, phone), products(name)')
+    .eq('seller_id', sellerId);
+
+  if (filters?.rating) {
+    query = query.eq('rating', filters.rating);
+  }
+  if (filters?.hasPhoto) {
+    query = query.neq('images', '{}');
+  }
+
+  const sortMap = {
+    newest: { column: 'created_at', ascending: false },
+    oldest: { column: 'created_at', ascending: true },
+    lowest: { column: 'rating', ascending: true },
+    highest: { column: 'rating', ascending: false },
+  };
+  const sort = sortMap[filters?.sortBy || 'newest'];
+  query = query.order(sort.column, { ascending: sort.ascending });
+
+  const { data, error } = await query.limit(100);
+
+  if (error) {
+    console.error('[api] fetchSellerReviews error:', error.message);
+    return [];
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    user_id: r.user_id,
+    seller_id: r.seller_id,
+    order_id: r.order_id,
+    product_id: r.product_id,
+    rating: r.rating,
+    text_comment: r.text_comment,
+    tags: r.tags || [],
+    images: r.images || [],
+    seller_reply: r.seller_reply,
+    seller_reply_at: r.seller_reply_at,
+    is_flagged: r.is_flagged,
+    created_at: r.created_at,
+    userName: r.users?.name || r.users?.phone || 'Покупатель',
+    productName: r.products?.name || 'Товар',
+  }));
+}
+
+export async function fetchSellerReviewAnalytics(
+  sellerId: string,
+  period: '7d' | '30d' | '6m' = '30d'
+): Promise<ReviewAnalyticsDashboard> {
+  const now = new Date();
+  const periodMap = { '7d': 7, '30d': 30, '6m': 180 };
+  const days = periodMap[period];
+  const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  // All reviews for this seller (ever)
+  const { data: allReviews, error: allErr } = await supabase
+    .from('reviews')
+    .select('rating, tags, created_at')
+    .eq('seller_id', sellerId)
+    .order('created_at', { ascending: true });
+
+  if (allErr) {
+    console.error('[api] fetchSellerReviewAnalytics error:', allErr.message);
+    return { averageRating: 0, reviewCount: 0, ratingTrend: [], topPositiveTags: [], topNegativeTags: [] };
+  }
+
+  const reviews = allReviews || [];
+  const averageRating = reviews.length > 0
+    ? Math.round((reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length) * 10) / 10
+    : 0;
+  const reviewCount = reviews.length;
+
+  // Build trend — group by label
+  const buckets = period === '7d' ? 7 : period === '30d' ? 6 : 6;
+  const bucketSize = period === '7d' ? 1 : period === '30d' ? 5 : 30;
+
+  const trend: { label: string; avg: number; count: number }[] = [];
+  for (let i = buckets - 1; i >= 0; i--) {
+    const start = new Date(now.getTime() - (i + 1) * bucketSize * 24 * 60 * 60 * 1000);
+    const end   = new Date(now.getTime() - i * bucketSize * 24 * 60 * 60 * 1000);
+    const bucket = reviews.filter((r: any) => {
+      const d = new Date(r.created_at);
+      return d >= start && d < end;
+    });
+    const label = period === '7d'
+      ? start.toLocaleDateString('ru-RU', { weekday: 'short' })
+      : period === '30d'
+        ? `${start.getDate()} ${start.toLocaleString('ru-RU', { month: 'short' })}`
+        : start.toLocaleString('ru-RU', { month: 'short' });
+    const avg = bucket.length > 0
+      ? Math.round((bucket.reduce((s: number, r: any) => s + r.rating, 0) / bucket.length) * 10) / 10
+      : 0;
+    trend.push({ label, avg, count: bucket.length });
+  }
+
+  // Tag clouds
+  const positiveTags: Record<string, number> = {};
+  const negativeTags: Record<string, number> = {};
+  reviews.forEach((r: any) => {
+    (r.tags || []).forEach((tag: string) => {
+      if (r.rating >= 4) positiveTags[tag] = (positiveTags[tag] || 0) + 1;
+      else negativeTags[tag] = (negativeTags[tag] || 0) + 1;
+    });
+  });
+
+  const topPositiveTags = Object.entries(positiveTags)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tag, count]) => ({ tag, count }));
+
+  const topNegativeTags = Object.entries(negativeTags)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tag, count]) => ({ tag, count }));
+
+  return { averageRating, reviewCount, ratingTrend: trend, topPositiveTags, topNegativeTags };
+}
+
+export async function replyToReview(reviewId: string, replyText: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('reviews')
+    .update({
+      seller_reply: replyText,
+      seller_reply_at: new Date().toISOString(),
+    })
+    .eq('id', reviewId);
+
+  if (error) {
+    console.error('[api] replyToReview error:', error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function flagReview(reviewId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('reviews')
+    .update({ is_flagged: true })
+    .eq('id', reviewId);
+
+  if (error) {
+    console.error('[api] flagReview error:', error.message);
+    return false;
+  }
+  return true;
+}
+

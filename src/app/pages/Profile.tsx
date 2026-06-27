@@ -3,8 +3,9 @@ import { useNavigate } from "react-router";
 import { Card, CardContent, Button, Input, Label, Badge } from "../components/ui";
 import {
   ShieldCheck, Building, MapPin, Mail, Phone, UploadCloud, LogOut, Award,
-  User, Pencil, Check, X, BarChart3
+  User, Pencil, Check, X, BarChart3, Star
 } from "lucide-react";
+
 import { toast } from "sonner";
 import { useUser } from "../context/UserContext";
 import { fetchRetentionAnalytics, type RetentionDataPoint } from "../../lib/api";
@@ -339,7 +340,26 @@ export function Profile() {
           </Card>
         </div>
 
+        {/* Reviews analytics shortcut */}
+        <div
+          className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors active:scale-[0.99]"
+          onClick={() => navigate('/reviews-analytics')}
+          role="button"
+        >
+          <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shrink-0">
+            <Star className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm">Аналитика отзывов</p>
+            <p className="text-xs text-gray-400 mt-0.5">Рейтинг, теги, ответы на отзывы</p>
+          </div>
+          <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+
         {/* Company data */}
+
 
         <div className="space-y-2">
           <h3 className="font-semibold text-gray-900 px-1 text-sm">Данные компании</h3>

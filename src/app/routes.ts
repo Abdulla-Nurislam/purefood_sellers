@@ -13,6 +13,7 @@ import { Settings } from "./pages/Settings";
 import { VerificationInfo } from "./pages/VerificationInfo";
 import { ActivityList } from "./pages/ActivityList";
 import { ProductVerification } from "./pages/ProductVerification";
+import { ReviewsAnalytics } from "./pages/ReviewsAnalytics";
 
 export const router = createBrowserRouter([
   { path: "/auth", Component: Auth },
@@ -34,4 +35,5 @@ export const router = createBrowserRouter([
   { path: "settings", Component: Settings },
   { path: "verification-info", Component: VerificationInfo },
   { path: "activity", Component: ActivityList },
+  { path: "reviews-analytics", Component: ReviewsAnalytics },
 ]);
