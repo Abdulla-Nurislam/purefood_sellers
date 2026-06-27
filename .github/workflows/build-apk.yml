@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -70,8 +72,13 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
 
-      - name: Upload APK to Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+      - name: Create or Update Latest Release
+        uses: ncipollo/release-action@v1
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          artifacts: "android/app/build/outputs/apk/debug/app-debug.apk"
+          tag: "latest"
+          name: "Latest Build"
+          body: "Automatically generated APK from the latest push."
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
